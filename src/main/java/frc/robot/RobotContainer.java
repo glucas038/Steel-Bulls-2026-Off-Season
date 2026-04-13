@@ -6,12 +6,10 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
-import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
@@ -19,6 +17,10 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.commands.drive.TeleopDrive;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.wpilibj2.command.Commands;
 
 public class RobotContainer {
     // private double MaxSpeed = 1 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -42,24 +44,33 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
+    // Seletor de Autônomo para a Driver Station (Traz as rotas da interface gráfica do PathPlanner)
+    private final SendableChooser<Command> autoChooser;
+
     public RobotContainer() {
         configureBindings();
+        
+        // Constrói o seletor lendo todos os arquivos .path da pasta deploy
+        autoChooser = AutoBuilder.buildAutoChooser();
+        SmartDashboard.putData("Auto Chooser", autoChooser);
     }
 
     private void configureBindings() {
         // Define o comando principal (padrão) do chassi como sendo a direção TeleopDrive.
         // A convenção WPILib dita que: Eixo X é pra frente/trás e Eixo Y é esquerda/direita.
         // Nossa classe TeleopDrive já faz a inversão necessária dos joysticks para se alinhar a isso.
-        drivetrain.setDefaultCommand(
-            new TeleopDrive(
-                drivetrain,
-                () -> joystick.getLeftY(),
-                () -> joystick.getLeftX(),
-                () -> joystick.getRightX(),
-                MaxSpeed,
-                MaxAngularRate
-            )
+        TeleopDrive teleopCommand = new TeleopDrive(
+            drivetrain,
+            () -> joystick.getLeftY(),
+            () -> joystick.getLeftX(),
+            () -> joystick.getRightX(),
+            MaxSpeed,
+            MaxAngularRate
         );
+        drivetrain.setDefaultCommand(teleopCommand);
+
+        // RB alterna entre Field-Centric e Robot-Centric
+        joystick.rightBumper().onTrue(Commands.runOnce(teleopCommand::toggleFieldCentric));
 
         // Quando o robô estiver "Disabled", aplica um pedido "Idle". 
         // Isso garante que os motores apliquem o seu NeutralMode (Brake ou Coast) corretamente.
@@ -91,27 +102,7 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        // Comando autônomo temporário simples de "andar para a frente".
-        // O próximo passo do projeto seria usar o PathPlanner aqui (ex: AutoBuilder.buildAuto("AutoNome")).
-        final var idle = new SwerveRequest.Idle();
-        final var drive = new SwerveRequest.FieldCentric()
-            .withDriveRequestType(DriveRequestType.Velocity);
-
-        return Commands.sequence(
-            // Primeiro, garantir que a orientação Field-Centric seja tratada como "0 graus" 
-            // no momento que o autônomo inicia, apontando pra longe da nossa área.
-            drivetrain.runOnce(() -> drivetrain.seedFieldCentric(Rotation2d.kZero)),
-            
-            // Depois, aplica velocidade X por 5 segundos.
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(0.5) // Velocidade (m/s)
-                    .withVelocityY(0)
-                    .withRotationalRate(0)
-            )
-            .withTimeout(5.0),
-            
-            // Por fim, solta os motores para ficar Idle pelo resto do autônomo.
-            drivetrain.applyRequest(() -> idle)
-        );
+        // Retorna a rota exata que o piloto selecionou lá na setinha da SmartDashboard!
+        return autoChooser.getSelected();
     }
 }

@@ -25,7 +25,11 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
-
+import frc.robot.generated.TunerConstants;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 /**
  * Classe que estende a SwerveDrivetrain original gerada pelo Phoenix 6 e implementa
  * Subsystem do WPILib. Isso permite que ela seja usada na arquitetura Command-Based (com o método periodic(), comandos, etc).
@@ -112,6 +116,40 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* The SysId routine to test */
     private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
 
+    /* Pedido vetorial para o PathPlanner (controla por velocidades em rad/s) */
+    private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
+
+    private void configurePathPlanner() {
+        RobotConfig config;
+        try {
+            config = RobotConfig.fromGUISettings();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+
+        AutoBuilder.configure(
+            () -> this.getState().Pose, // Leitura da Odometria Atual
+            this::resetPose,            // Zerar a Odometria
+            () -> this.getState().Speeds, // Leitura da Velocidade Vetorial Atual
+            (speeds, feedforwards) -> this.setControl(autoRequest.withSpeeds(speeds)), // Aplica as velocidades no Chassi
+            new PPHolonomicDriveController(
+                new PIDConstants(5.0, 0.0, 0.0), // PID de Translação (X e Y)
+                new PIDConstants(5.0, 0.0, 0.0)  // PID de Rotação (Ângulo)
+            ),
+            config,
+            () -> {
+                // Inverter o espelho dependendo se formos Aliança Vermelha ou Azul
+                var alliance = DriverStation.getAlliance();
+                if (alliance.isPresent()) {
+                    return alliance.get() == DriverStation.Alliance.Red;
+                }
+                return false;
+            },
+            this // Requer o uso da base Drivetrain
+        );
+    }
+
     /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.
      * <p>
@@ -130,6 +168,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        configurePathPlanner();
     }
 
     /**
@@ -154,6 +193,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        configurePathPlanner();
     }
 
     /**
@@ -186,6 +226,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        configurePathPlanner();
     }
 
     /**

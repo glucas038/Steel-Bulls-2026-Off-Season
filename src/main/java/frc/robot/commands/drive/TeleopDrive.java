@@ -17,7 +17,15 @@ public class TeleopDrive extends Command {
     private final double maxSpeed;
     private final double maxAngularRate;
 
-    private final SwerveRequest.FieldCentric driveRequest;
+    // Modos de referência da direção:
+    // FieldCentric: "Frente" no joystick leva o robô sempre para a quadra adversária, independente pra onde o bico está apontando.
+    private final SwerveRequest.FieldCentric fieldCentricRequest;
+    
+    // RobotCentric: "Frente" no joystick leva o robô na direção em que o bico dele (chassi) está apontando.
+    private final SwerveRequest.RobotCentric robotCentricRequest;
+    
+    // Controle interno (flag) de qual o modo ativo no momento. Inicializamos sempre na quadra (FieldCentric).
+    private boolean isFieldCentric = true;
 
     // Filtros de Rampa de Aceleração (Slew Rate Limiters)
     // "3.0" significa que leva 1/3 (0.33) segundos para ir de 0 a 100% de velocidade.
@@ -41,10 +49,19 @@ public class TeleopDrive extends Command {
         this.maxAngularRate = maxAngularRate;
 
         // Limpamos o deadband da CTRE porque agora fazemos isso matematicamente no execute
-        this.driveRequest = new SwerveRequest.FieldCentric()
+        this.fieldCentricRequest = new SwerveRequest.FieldCentric()
+            .withDriveRequestType(DriveRequestType.Velocity);
+        this.robotCentricRequest = new SwerveRequest.RobotCentric()
             .withDriveRequestType(DriveRequestType.Velocity);
             
         addRequirements(drivetrain);
+    }
+
+    /**
+     * Função chamada para inverter entre dirigir referenciado na quadra ou no bico do chassi.
+     */
+    public void toggleFieldCentric() {
+        this.isFieldCentric = !this.isFieldCentric;
     }
 
     @Override
@@ -71,11 +88,19 @@ public class TeleopDrive extends Command {
         double limitedStrafe  = yLimiter.calculate(cubedStrafe);
         double limitedRot     = rotLimiter.calculate(cubedRot);
 
-        // 5. Envia ao chassi físico (agora multiplicando a porcentagem filtrada final pelas Velocidades Máximas)
-        drivetrain.setControl(
-            driveRequest.withVelocityX(limitedForward * maxSpeed)
-                        .withVelocityY(limitedStrafe * maxSpeed)
-                        .withRotationalRate(limitedRot * maxAngularRate)
-        );
+        // 5. Aplica as velocidades filtradas no motor de acordo com o modo de direção selecionado
+        if (isFieldCentric) {
+            drivetrain.setControl(
+                fieldCentricRequest.withVelocityX(limitedForward * maxSpeed)
+                            .withVelocityY(limitedStrafe * maxSpeed)
+                            .withRotationalRate(limitedRot * maxAngularRate)
+            );
+        } else {
+            drivetrain.setControl(
+                robotCentricRequest.withVelocityX(limitedForward * maxSpeed)
+                            .withVelocityY(limitedStrafe * maxSpeed)
+                            .withRotationalRate(limitedRot * maxAngularRate)
+            );
+        }
     }
 }
