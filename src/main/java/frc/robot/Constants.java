@@ -15,5 +15,44 @@ package frc.robot;
 public final class Constants {
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
+    public static final int kMechanismControllerPort = 1;
   }
+
+  public static class MechanismConstants {
+    // ---- INTAKE ----
+    // Articulação: 2 Motores Kraken X44 (ID 10 e 11 hipotéticos)
+    public static final int kIntakePivotLeaderId = 10;
+    public static final int kIntakePivotFollowerId = 11;
+    public static final double kIntakePivotGearRatio = 81.0; 
+
+    // Fuel Roller: 1 Motor NEO Vortex (SparkFlex)
+    public static final int kIntakeRollerId = 12;
+
+    // ---- CENTRIFUGA ----
+    // 1 Motor Kraken X44
+    public static final int kCentrifugeId = 13;
+    public static final double kCentrifugeGearRatio = 9.0;
+
+    // ---- FEEDER ----
+    // 1 Motor NEO Vortex (SparkFlex)
+    public static final int kFeederId = 14;
+
+    // ---- SHOOTER PIVOT ----
+    // 1 Motor Kraken X44
+    public static final int kShooterPivotId = 15;
+    // Ratio a ser editado
+    public static final double kShooterPivotGearRatio = 100.0;
+
+    // ---- SHOOTER FLYWHEELS ----
+    // 2 Motores NEO Vortex (SparkFlex)
+    public static final int kShooterLeftId = 16;
+    public static final int kShooterRightId = 17;
+
+    // ---- ELEVATOR ----
+    // 1 Motor Kraken X60
+    public static final int kElevatorId = 18;
+    // Ratio a ser editado
+    public static final double kElevatorGearRatio = 10.0;
+  }
+
 }
