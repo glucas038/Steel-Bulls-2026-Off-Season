@@ -26,7 +26,10 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotPeriodic() {
-        m_timeAndJoystickReplay.update();
+        m_timeAndJoystickReplay.update(); // Mantém o log do replay rodando
+        
+        // ESSENCIAL: Isso roda o Scheduler. Sem isso, os Comandos (como TeleopDrive) não vão executar.
+        // É isso que faz a arquitetura Command-Based funcionar a cada 20ms.
         CommandScheduler.getInstance().run(); 
     }
 
@@ -41,8 +44,10 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousInit() {
+        // Puxa o comando autônomo que foi selecionado no RobotContainer
         m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
+        // Se existir um comando, agenda para ele rodar
         if (m_autonomousCommand != null) {
             CommandScheduler.getInstance().schedule(m_autonomousCommand);
         }
@@ -56,6 +61,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopInit() {
+        // Cancela o comando do modo autônomo assim que o robô entra em Teleop (manual)
+        // Isso impede que o autônomo continue agindo enquanto o piloto tenta dirigir
         if (m_autonomousCommand != null) {
             CommandScheduler.getInstance().cancel(m_autonomousCommand);
         }
