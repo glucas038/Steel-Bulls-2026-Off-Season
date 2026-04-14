@@ -14,8 +14,12 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
+import frc.robot.Constants.MechanismConstants;
+import frc.robot.Constants.OperatorConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IntakePivot;
+import frc.robot.subsystems.IntakeRoller;
 import frc.robot.commands.drive.TeleopDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -40,9 +44,12 @@ public class RobotContainer {
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
-    private final CommandXboxController joystick = new CommandXboxController(0);
+    private final CommandXboxController joystick = new CommandXboxController(OperatorConstants.kDriverControllerPort);
+    private final CommandXboxController operator = new CommandXboxController(OperatorConstants.kMechanismControllerPort);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final IntakePivot intakePivot = new IntakePivot();
+    public final IntakeRoller intakeRoller = new IntakeRoller();
 
     // Seletor de Autônomo para a Driver Station (Traz as rotas da interface gráfica do PathPlanner)
     private final SendableChooser<Command> autoChooser;
@@ -99,6 +106,23 @@ public class RobotContainer {
 
         // Registra a função do logger (do AdvantageScope/WPILog) para capturar telemetria do chassi
         drivetrain.registerTelemetry(logger::telemeterize);
+
+        // ---- Intake (controle no gamepad do operador, porta kMechanismControllerPort) ----
+        // D-pad: subir (stow) / descer ate posicao x
+        operator.povUp().whileTrue(
+            intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotStowJointRotations));
+        operator.povDown().whileTrue(
+            intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotDownJointRotations));
+        // Bumpers: coletar / expelir (podem rodar junto com o pivô - subsistemas separados)
+        operator.leftBumper().whileTrue(
+            intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower));
+        operator.rightBumper().whileTrue(
+            intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerExpelPower));
+        // Modo tiro: oscila pivô + roller coletando (ajuste posicoes/tempo em MechanismConstants)
+        operator.x().whileTrue(
+            Commands.parallel(
+                intakePivot.shootAssistOscillateCommand(),
+                intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower)));
     }
 
     public Command getAutonomousCommand() {
