@@ -17,16 +17,15 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.MechanismConstants;
-import frc.robot.Constants.MechanismConstants.IntakeArticulator;
 
 /**
- * Intake pivot: dois TalonFX leader/follower. Config alinhada a {@link IntakeArticulator}
+ * Intake pivot: dois TalonFX leader/follower.
  * (PID, corrente, picos de tensao, inversao).
  */
 public class IntakePivot extends SubsystemBase {
 
-    private final TalonFX pivotLeader = new TalonFX(IntakeArticulator.kLeaderMotorId);
-    private final TalonFX pivotFollower = new TalonFX(IntakeArticulator.kFollowerMotorId);
+    private final TalonFX pivotLeader = new TalonFX(MechanismConstants.kIntakePivotLeaderId);
+    private final TalonFX pivotFollower = new TalonFX(MechanismConstants.kIntakePivotFollowerId);
 
     private final DutyCycleOut pivotOpenLoop = new DutyCycleOut(0);
     private final PositionVoltage positionHold = new PositionVoltage(0);
@@ -37,40 +36,40 @@ public class IntakePivot extends SubsystemBase {
         TalonFXConfiguration cfg = new TalonFXConfiguration();
         cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        cfg.Slot0.kP = IntakeArticulator.kP;
-        cfg.Slot0.kI = IntakeArticulator.kI;
-        cfg.Slot0.kD = IntakeArticulator.kD;
-        cfg.Slot0.kS = IntakeArticulator.kS;
-        cfg.Slot0.kV = IntakeArticulator.kV;
-        cfg.Slot0.kA = IntakeArticulator.kA;
-        cfg.Slot0.kG = IntakeArticulator.kG;
+        cfg.Slot0.kP = MechanismConstants.kIntakePivot_kP;
+        cfg.Slot0.kI = MechanismConstants.kIntakePivot_kI;
+        cfg.Slot0.kD = MechanismConstants.kIntakePivot_kD;
+        cfg.Slot0.kS = MechanismConstants.kIntakePivot_kS;
+        cfg.Slot0.kV = MechanismConstants.kIntakePivot_kV;
+        cfg.Slot0.kA = MechanismConstants.kIntakePivot_kA;
+        cfg.Slot0.kG = MechanismConstants.kIntakePivot_kG;
 
-        cfg.Voltage.PeakForwardVoltage = 12.0 * IntakeArticulator.kMaxOutput;
-        cfg.Voltage.PeakReverseVoltage = 12.0 * IntakeArticulator.kMinOutput;
+        cfg.Voltage.PeakForwardVoltage = 12.0 * MechanismConstants.kIntakePivotMaxOutput;
+        cfg.Voltage.PeakReverseVoltage = 12.0 * MechanismConstants.kIntakePivotMinOutput;
 
-        if (IntakeArticulator.kEnableCurrentLimit) {
+        if (MechanismConstants.kIntakePivotEnableCurrentLimit) {
             cfg.withCurrentLimits(
                 new CurrentLimitsConfigs()
-                    .withStatorCurrentLimit(Amps.of(IntakeArticulator.kStatorCurrentLimit))
+                    .withStatorCurrentLimit(Amps.of(MechanismConstants.kIntakePivotStatorCurrentLimit))
                     .withStatorCurrentLimitEnable(true)
-                    .withSupplyCurrentLimit(Amps.of(IntakeArticulator.kSupplyCurrentLimit))
+                    .withSupplyCurrentLimit(Amps.of(MechanismConstants.kIntakePivotSupplyCurrentLimit))
                     .withSupplyCurrentLimitEnable(true));
         }
 
         cfg.MotorOutput.Inverted =
-            IntakeArticulator.kLeaderInverted
+            MechanismConstants.kIntakePivotLeaderInverted
                 ? InvertedValue.Clockwise_Positive
                 : InvertedValue.CounterClockwise_Positive;
         pivotLeader.getConfigurator().apply(cfg);
 
         cfg.MotorOutput.Inverted =
-            IntakeArticulator.kFollowerInverted
+            MechanismConstants.kIntakePivotFollowerInverted
                 ? InvertedValue.Clockwise_Positive
                 : InvertedValue.CounterClockwise_Positive;
         pivotFollower.getConfigurator().apply(cfg);
 
         MotorAlignmentValue followAlign =
-            IntakeArticulator.kFollowerOpposed
+            MechanismConstants.kIntakePivotFollowerOpposed
                 ? MotorAlignmentValue.Opposed
                 : MotorAlignmentValue.Aligned;
         pivotFollower.setControl(new Follower(pivotLeader.getDeviceID(), followAlign));
@@ -80,7 +79,7 @@ public class IntakePivot extends SubsystemBase {
 
     /** Rotacoes da junta (encoder motor / gear ratio). */
     public double getJointPosition() {
-        return pivotLeader.getPosition().getValueAsDouble() / IntakeArticulator.kGearRatio;
+        return pivotLeader.getPosition().getValueAsDouble() / MechanismConstants.kIntakePivotGearRatio;
     }
 
     public void setPivotPower(double percent) {
@@ -88,7 +87,7 @@ public class IntakePivot extends SubsystemBase {
     }
 
     public void holdJointPosition(double jointRotations) {
-        double motorRotations = jointRotations * IntakeArticulator.kGearRatio;
+        double motorRotations = jointRotations * MechanismConstants.kIntakePivotGearRatio;
         pivotLeader.setControl(positionHold.withSlot(0).withPosition(motorRotations));
     }
 
@@ -108,16 +107,22 @@ public class IntakePivot extends SubsystemBase {
             () -> m_shootOscStartSec = Timer.getFPGATimestamp(),
             () -> {
                 double elapsed = Timer.getFPGATimestamp() - m_shootOscStartSec;
-                int phase = (int) (elapsed / MechanismConstants.kIntakeShootOscHalfPeriodSeconds);
-                boolean high = (phase % 2) == 0;
-                holdJointPosition(
-                    high
-                        ? MechanismConstants.kIntakePivotShootOscJointA
-                        : MechanismConstants.kIntakePivotShootOscJointB);
+
+                double a = MechanismConstants.kIntakePivotShootOscJointA;
+                double b = MechanismConstants.kIntakePivotShootOscJointB;
+
+                double center = (a + b) / 2.0;
+                double amplitude = Math.abs(a - b) / 2.0;
+                double period = MechanismConstants.kIntakeShootOscHalfPeriodSeconds * 2.0;
+
+                double omega = (2.0 * Math.PI) / period;
+                double targetJointRotations = center + amplitude * Math.sin(omega * elapsed);
+
+                holdJointPosition(targetJointRotations);
             },
             interrupted -> stopPivotHold(),
             () -> false,
-            this)
-            .withName("IntakeShootAssistOscPivot");
+            this
+        ).withName("IntakeShootAssistOscPivot");
     }
 }
