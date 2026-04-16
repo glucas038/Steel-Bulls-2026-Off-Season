@@ -104,6 +104,24 @@ public class RobotContainer {
         // Importante caso o robô perca a referência do campo ou seja posicionado errado.
         joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
+        /* 
+         * =========================================================================
+         * CÓDIGO GUARDADO PARA O FUTURO: INICIALIZAR O ROBÔ EM OUTROS ÂNGULOS
+         * =========================================================================
+         * Se um dia você quiser colocar o robô virado de lado (90 graus) ou de 
+         * costas (180 graus) antes de iniciar a partida, basta descomentar as 
+         * linhas abaixo. Elas usam as setinhas do controle para forçar o robô a
+         * entender a sua nova posição inicial.
+         * 
+         * joystick.povLeft().onTrue(drivetrain.runOnce(() -> 
+         *     drivetrain.seedFieldRelative(new edu.wpi.first.math.geometry.Pose2d(0, 0, edu.wpi.first.math.geometry.Rotation2d.fromDegrees(90)))
+         * ));
+         * 
+         * joystick.povDown().onTrue(drivetrain.runOnce(() -> 
+         *     drivetrain.seedFieldRelative(new edu.wpi.first.math.geometry.Pose2d(0, 0, edu.wpi.first.math.geometry.Rotation2d.fromDegrees(180)))
+         * ));
+         */
+
         // Registra a função do logger (do AdvantageScope/WPILog) para capturar telemetria do chassi
         drivetrain.registerTelemetry(logger::telemeterize);
 

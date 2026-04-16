@@ -12,6 +12,7 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
@@ -30,6 +31,8 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import frc.robot.utils.LimelightHelpers;
+import frc.robot.utils.LimelightHelpers.PoseEstimate;
 /**
  * Classe que estende a SwerveDrivetrain original gerada pelo Phoenix 6 e implementa
  * Subsystem do WPILib. Isso permite que ela seja usada na arquitetura Command-Based (com o método periodic(), comandos, etc).
@@ -279,6 +282,28 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 );
                 m_hasAppliedOperatorPerspective = true;
             });
+        }
+
+        // ========================================================
+        // ATUALIZAÇÃO DA ODOMETRIA USANDO A LIMELIGHT (MEGATAG)
+        // ========================================================
+        // Traz as leituras considerando a perspectiva padrão (Aliança Azul no WPI)
+        PoseEstimate limelightMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear");
+
+        // Verifica se a leitura é válida e a câmera está vendo 1 ou mais AprilTags
+        if (limelightMeasurement != null && limelightMeasurement.tagCount > 0) {
+            
+            // Rejeita leituras duvidosas se o robô estiver longe demais da tag (ex: + de 3.5 metros)
+            // para evitar que pequenas tremedeiras da câmera gerem saltos.
+            if (limelightMeasurement.avgTagDist < 3.5) {
+                // Adiciona a medição com matriz de confiança.
+                // Usamos 9999999 para a rotação (Theta) para dizer: NUNCA confie no ângulo da câmera, confie apenas no Pigeon!
+                this.addVisionMeasurement(
+                    limelightMeasurement.pose, 
+                    limelightMeasurement.timestampSeconds,
+                    VecBuilder.fill(0.5, 0.5, 9999999)
+                );
+            }
         }
     }
 
