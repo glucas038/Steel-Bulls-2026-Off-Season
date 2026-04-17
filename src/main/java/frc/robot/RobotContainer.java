@@ -20,6 +20,10 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakePivot;
 import frc.robot.subsystems.IntakeRoller;
+import frc.robot.subsystems.ShooterTurret;
+import frc.robot.subsystems.ShooterFlywheels;
+import frc.robot.subsystems.Feeder;
+import frc.robot.subsystems.Centrifuge;
 import frc.robot.commands.drive.TeleopDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -50,6 +54,11 @@ public class RobotContainer {
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     public final IntakePivot intakePivot = new IntakePivot();
     public final IntakeRoller intakeRoller = new IntakeRoller();
+    
+    public final ShooterTurret shooterTurret = new ShooterTurret();
+    public final ShooterFlywheels shooterFlywheels = new ShooterFlywheels();
+    public final Feeder feeder = new Feeder();
+    public final Centrifuge centrifuge = new Centrifuge();
 
     // Seletor de Autônomo para a Driver Station (Traz as rotas da interface gráfica do PathPlanner)
     private final SendableChooser<Command> autoChooser;
@@ -141,6 +150,37 @@ public class RobotContainer {
             Commands.parallel(
                 intakePivot.shootAssistOscillateCommand(),
                 intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower)));
+
+        // Botão B: Liga a Centrífuga (Agitador de bolas) a 50% de força
+        operator.b().whileTrue(
+            centrifuge.runCentrifugeCommand(0.5)
+        );
+
+
+        // ---- Shooter, Turret e Feeder ----
+        
+        // Gatilho Esquerdo (LT): Prepara o tiro (Gira Flywheels a 4000 RPM) e garante torre reta
+        operator.leftTrigger().whileTrue(
+            Commands.parallel(
+                shooterFlywheels.runFlywheelsRPMCommand(2500), 
+                Commands.runEnd(() -> shooterTurret.setTargetAngle(0), () -> shooterTurret.setPower(0), shooterTurret)
+            )
+        );
+
+        // Gatilho Direito (RT): Roda o Feeder para descarregar o pente de bolas (100% força)
+        operator.rightTrigger().whileTrue(
+            feeder.runFeederCommand(0.3)
+        );
+        
+        // Botões para Testar a Torre Giratória:
+        // Botão Y vira a torre 90 graus para a esquerda.
+        operator.y().whileTrue(
+            Commands.runEnd(() -> shooterTurret.setTargetAngle(-90), () -> shooterTurret.setPower(0), shooterTurret)
+        );
+        // Botão A vira a torre 90 graus para a direita.
+        operator.a().whileTrue(
+            Commands.runEnd(() -> shooterTurret.setTargetAngle(90), () -> shooterTurret.setPower(0), shooterTurret)
+        );
     }
 
     public Command getAutonomousCommand() {

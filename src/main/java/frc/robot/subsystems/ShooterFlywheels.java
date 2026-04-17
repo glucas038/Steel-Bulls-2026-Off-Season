@@ -3,9 +3,13 @@ package frc.robot.subsystems;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.ClosedLoopConfig;
+import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.ResetMode;
 import com.revrobotics.PersistMode;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.MechanismConstants;
@@ -23,29 +27,70 @@ public class ShooterFlywheels extends SubsystemBase {
     private final SparkFlex leftMotor = new SparkFlex(MechanismConstants.kShooterLeftId, MotorType.kBrushless);
     private final SparkFlex rightMotor = new SparkFlex(MechanismConstants.kShooterRightId, MotorType.kBrushless);
 
+    // Controladores PID nativos dos Sparks
+    private final SparkClosedLoopController leftController;
+    private final SparkClosedLoopController rightController;
+
     public ShooterFlywheels() {
-        SparkFlexConfig config = new SparkFlexConfig();
-        config.idleMode(SparkFlexConfig.IdleMode.kCoast);
+        SparkFlexConfig leftConfig = new SparkFlexConfig();
+        SparkFlexConfig rightConfig = new SparkFlexConfig();
+        
+        leftConfig.idleMode(SparkFlexConfig.IdleMode.kCoast);
+        rightConfig.idleMode(SparkFlexConfig.IdleMode.kCoast);
 
-        // Opcional: configurar limites de corrente
-        // A inversão depende de como estão montados frente a frente
-        leftMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        rightMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        // A inversão física foi confirmada: os motores estão de frente um para o outro
+        rightConfig.inverted(true); // Se atirarem para trás na vida real, altere para o leftConfig
+
+        // Opcional: configurar limites de corrente para não desarmar robô
+        leftConfig.smartCurrentLimit(50);
+        rightConfig.smartCurrentLimit(50);
+
+        // Configuração de PID Velocity
+        ClosedLoopConfig leftPID = leftConfig.closedLoop;
+        ClosedLoopConfig rightPID = rightConfig.closedLoop;
+        
+        leftPID.p(MechanismConstants.kShooterFlywheels_kP)
+               .i(MechanismConstants.kShooterFlywheels_kI)
+               .d(MechanismConstants.kShooterFlywheels_kD)
+               .velocityFF(MechanismConstants.kShooterFlywheels_kFF);
+               
+        rightPID.p(MechanismConstants.kShooterFlywheels_kP)
+               .i(MechanismConstants.kShooterFlywheels_kI)
+               .d(MechanismConstants.kShooterFlywheels_kD)
+               .velocityFF(MechanismConstants.kShooterFlywheels_kFF);
+
+        // Aplica os configs
+        leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        rightMotor.configure(rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        
+        leftController = leftMotor.getClosedLoopController();
+        rightController = rightMotor.getClosedLoopController();
     }
 
-    /**
-     * Roda os Flywheels com dado percentual.
-     * Importante: Geralmente o da esquerda/direita devem girar em direções opostas dependendo da montagem.
-     */
-    public void setPower(double percentLeft, double percentRight) {
-        leftMotor.set(percentLeft);
-        rightMotor.set(percentRight);
+    /** Roda os motores via PID (RPM alvo) */
+    public void setTargetRPM(double rpm) {
+        // Como o direito já foi invertido no config, mandamos o número positivo pros dois!
+        leftController.setReference(rpm, ControlType.kVelocity);
+        rightController.setReference(rpm, ControlType.kVelocity);
+        SmartDashboard.putNumber("Flywheel Target RPM", rpm);
     }
 
-    public Command runFlywheelsCommand(double power) {
+    /** Roda os motores a uma porcentagem fixa simples (Open Loop) */
+    public void setPower(double percent) {
+        leftMotor.set(percent);
+        rightMotor.set(percent);
+    }
+
+    public Command runFlywheelsRPMCommand(double rpm) {
         return this.runEnd(
-            () -> setPower(power, -power), // Um roda em X o outro em -X (se não houver inversão no config)
-            () -> setPower(0, 0)
+            () -> setTargetRPM(rpm),
+            () -> setPower(0)
         );
+    }
+
+    @Override
+    public void periodic() {
+        SmartDashboard.putNumber("Flywheel L RPM", leftMotor.getEncoder().getVelocity());
+        SmartDashboard.putNumber("Flywheel R RPM", rightMotor.getEncoder().getVelocity());
     }
 }
