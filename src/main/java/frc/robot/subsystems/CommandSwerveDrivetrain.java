@@ -305,6 +305,21 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 );
             }
         }
+
+        // ========================================================
+        // CÁLCULO DE DISTÂNCIA CONTÍNUA ATÉ O HUB (PARA TESTE/INTERPOLAÇÃO)
+        // ========================================================
+        edu.wpi.first.math.geometry.Translation2d targetHub;
+        java.util.Optional<Alliance> currentAlliance = DriverStation.getAlliance();
+        
+        if (currentAlliance.isPresent() && currentAlliance.get() == Alliance.Red) {
+            targetHub = frc.robot.Constants.MechanismConstants.kRedHubPose;
+        } else {
+            targetHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
+        }
+        
+        double distanceMeters = this.getState().Pose.getTranslation().getDistance(targetHub);
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Hub Distance Meters", distanceMeters);
     }
 
     private void startSimThread() {

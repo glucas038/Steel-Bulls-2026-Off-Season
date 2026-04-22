@@ -23,6 +23,7 @@ public class Feeder extends SubsystemBase {
 
     public Feeder() {
         SparkFlexConfig config = new SparkFlexConfig();
+        config.inverted(true);
         motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 

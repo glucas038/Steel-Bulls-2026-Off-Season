@@ -14,8 +14,8 @@ public class TeleopDrive extends Command {
     private final DoubleSupplier forwardSupplier;
     private final DoubleSupplier strafeSupplier;
     private final DoubleSupplier rotationSupplier;
-    private final double maxSpeed;
-    private final double maxAngularRate;
+    private final DoubleSupplier maxSpeedSupplier;
+    private final DoubleSupplier maxAngularRateSupplier;
 
     // Modos de referência da direção:
     // FieldCentric: "Frente" no joystick leva o robô sempre para a quadra adversária, independente pra onde o bico está apontando.
@@ -38,15 +38,15 @@ public class TeleopDrive extends Command {
         DoubleSupplier forwardSupplier, 
         DoubleSupplier strafeSupplier, 
         DoubleSupplier rotationSupplier, 
-        double maxSpeed, 
-        double maxAngularRate
+        DoubleSupplier maxSpeedSupplier, 
+        DoubleSupplier maxAngularRateSupplier
     ) {
         this.drivetrain = drivetrain;
         this.forwardSupplier = forwardSupplier;
         this.strafeSupplier = strafeSupplier;
         this.rotationSupplier = rotationSupplier;
-        this.maxSpeed = maxSpeed;
-        this.maxAngularRate = maxAngularRate;
+        this.maxSpeedSupplier = maxSpeedSupplier;
+        this.maxAngularRateSupplier = maxAngularRateSupplier;
 
         // Limpamos o deadband da CTRE porque agora fazemos isso matematicamente no execute
         this.fieldCentricRequest = new SwerveRequest.FieldCentric()
@@ -89,17 +89,20 @@ public class TeleopDrive extends Command {
         double limitedRot     = rotLimiter.calculate(cubedRot);
 
         // 5. Aplica as velocidades filtradas no motor de acordo com o modo de direção selecionado
+        double currentMaxSpeed = maxSpeedSupplier.getAsDouble();
+        double currentMaxAngular = maxAngularRateSupplier.getAsDouble();
+
         if (isFieldCentric) {
             drivetrain.setControl(
-                fieldCentricRequest.withVelocityX(limitedForward * maxSpeed)
-                            .withVelocityY(limitedStrafe * maxSpeed)
-                            .withRotationalRate(limitedRot * maxAngularRate)
+                fieldCentricRequest.withVelocityX(limitedForward * currentMaxSpeed)
+                            .withVelocityY(limitedStrafe * currentMaxSpeed)
+                            .withRotationalRate(limitedRot * currentMaxAngular)
             );
         } else {
             drivetrain.setControl(
-                robotCentricRequest.withVelocityX(limitedForward * maxSpeed)
-                            .withVelocityY(limitedStrafe * maxSpeed)
-                            .withRotationalRate(limitedRot * maxAngularRate)
+                robotCentricRequest.withVelocityX(limitedForward * currentMaxSpeed)
+                            .withVelocityY(limitedStrafe * currentMaxSpeed)
+                            .withRotationalRate(limitedRot * currentMaxAngular)
             );
         }
     }

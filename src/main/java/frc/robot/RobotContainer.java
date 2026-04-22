@@ -9,6 +9,8 @@ import static edu.wpi.first.units.Units.*;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Pose2d;
+import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -25,9 +27,12 @@ import frc.robot.subsystems.ShooterFlywheels;
 import frc.robot.subsystems.Feeder;
 import frc.robot.subsystems.Centrifuge;
 import frc.robot.commands.drive.TeleopDrive;
+import frc.robot.commands.drive.TeleopFacingHubCommand;
+import frc.robot.commands.shooter.AimTurretOdometryCommand;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.wpilibj2.command.Commands;
 
 public class RobotContainer {
@@ -64,6 +69,9 @@ public class RobotContainer {
     private final SendableChooser<Command> autoChooser;
 
     public RobotContainer() {
+        // Obrigatório: Registrar os Comandos Nomeados antes de carregar o AutoChooser/Rotas
+        registerNamedCommands();
+        
         configureBindings();
         
         // Constrói o seletor lendo todos os arquivos .path da pasta deploy
@@ -80,8 +88,8 @@ public class RobotContainer {
             () -> joystick.getLeftY(),
             () -> joystick.getLeftX(),
             () -> joystick.getRightX(),
-            MaxSpeed,
-            MaxAngularRate
+            () -> operator.getHID().getLeftTriggerAxis() > 0.1 ? MaxSpeed * 0.2 : MaxSpeed,
+            () -> operator.getHID().getLeftTriggerAxis() > 0.1 ? MaxAngularRate * 0.2 : MaxAngularRate
         );
         drivetrain.setDefaultCommand(teleopCommand);
 
@@ -101,6 +109,27 @@ public class RobotContainer {
             // Botão B aponta as rodas baseado no analógico esquerdo, útil para alinhar sem mover
             point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
         ));
+
+        // Botão Y: TESTE DE NAVEGAÇÃO AUTÔNOMA (SEGURE PARA VIAJAR)
+        // O robô assumirá o volante e irá para X=2, Y=2 de forma restrita e devagar (0.5 m/s) pra teste.
+        joystick.y().whileTrue(
+            AutoBuilder.pathfindToPose(
+                new Pose2d(2.570, 2.334, Rotation2d.fromDegrees(-90)),
+                new PathConstraints(0.5, 0.5, Math.toRadians(360), Math.toRadians(540)),
+                0.0
+            )
+        );
+
+        // Gatilho Esquerdo (LT): AimBot do Chassis! 
+        // O piloto continua andando XY livremente, mas a rotação mira no Hub de forma lenta ("na moralzinha").
+        joystick.leftTrigger().whileTrue(
+            new TeleopFacingHubCommand(
+                drivetrain,
+                () -> joystick.getLeftY(), 
+                () -> joystick.getLeftX(), 
+                MaxSpeed * 0.3 // Corre em velocidade baixa como pedido
+            )
+        );
 
         // Rotinas do SysId (Usadas apenas na fase de tunagem/characterization)
         // Cada rotina coleta dados de física do robô para encontrar fatores de PID (Kf, Kp, Ki, Kd)
@@ -159,11 +188,11 @@ public class RobotContainer {
 
         // ---- Shooter, Turret e Feeder ----
         
-        // Gatilho Esquerdo (LT): Prepara o tiro (Gira Flywheels a 4000 RPM) e garante torre reta
+        // Gatilho Esquerdo (LT): Prepara o tiro (Gira Flywheels a 2500 RPM) e liga Auto-Aim (Torreta mira por Odometria)
         operator.leftTrigger().whileTrue(
             Commands.parallel(
                 shooterFlywheels.runFlywheelsRPMCommand(2500), 
-                Commands.runEnd(() -> shooterTurret.setTargetAngle(0), () -> shooterTurret.setPower(0), shooterTurret)
+                new AimTurretOdometryCommand(drivetrain, shooterTurret)
             )
         );
 
@@ -186,5 +215,45 @@ public class RobotContainer {
     public Command getAutonomousCommand() {
         // Retorna a rota exata que o piloto selecionou lá na setinha da SmartDashboard!
         return autoChooser.getSelected();
+    }
+
+    private void registerNamedCommands() {
+        // 1. Comando Básico de Coleta
+        NamedCommands.registerCommand("Intake Coletar", 
+            Commands.parallel(
+                intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotDownJointRotations),
+                intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower)
+            )
+        );
+
+        // 2. Comando Básico de Estocagem Segura
+        NamedCommands.registerCommand("Intake Estocar", 
+            Commands.parallel(
+                intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotStowJointRotations),
+                intakeRoller.runRollerCommand(0.0) // Desliga
+            )
+        );
+
+        // 3. Sequência Complexa de Tiro (Míssil com Odometria)
+        NamedCommands.registerCommand("Atirar Sniper", 
+            Commands.parallel(
+                // A) Estes processos ficam mantidos ligados durante TODOS os passos abaixo:
+                shooterFlywheels.runFlywheelsRPMCommand(2500), 
+                //new AimTurretOdometryCommand(drivetrain, shooterTurret),
+                
+                // B) O Tempo passando (Sequência engatilhada):
+                Commands.sequence(
+                    // Passo 1: Espera os RPMs subirem e a torre alinhar
+                    Commands.waitSeconds(1.0),
+
+                    // Passo 2: Balança tudo para desengasgar / empurrar do funil
+                    Commands.parallel(
+                        feeder.runFeederCommand(0.3).withTimeout(5),
+                        intakePivot.shootAssistOscillateCommand(),
+                        centrifuge.runCentrifugeCommand(0.5)
+                    ).withTimeout(10.0)
+                )
+            ).withTimeout(10.0) // Timeout de 6s pra dar tempo perfeito: 1s mirando + 5s atirando as 30 bolas!
+        );
     }
 }

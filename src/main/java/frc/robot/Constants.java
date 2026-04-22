@@ -8,10 +8,9 @@ package frc.robot;
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
  * globally (i.e. public static). Do not put anything functional in this class.
- *
- * <p>It is advised to statically import this class (or one of its inner classes) wherever the
- * constants are needed, to reduce verbosity.
  */
+import edu.wpi.first.math.geometry.Translation2d;
+
 public final class Constants {
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
@@ -62,8 +61,8 @@ public final class Constants {
     /** Metade do periodo de oscilacao (s) em cada alvo. */
     public static final double kIntakeShootOscHalfPeriodSeconds = 0.7;
 
-    public static final double kIntakeRollerCollectPower = 0.2;
-    public static final double kIntakeRollerExpelPower = -0.2;
+    public static final double kIntakeRollerCollectPower = 0.3;
+    public static final double kIntakeRollerExpelPower = -0.3;
 
     // ---- CENTRIFUGA ----
     // 1 Motor Kraken X44
@@ -79,9 +78,13 @@ public final class Constants {
     public static final int kShooterTurretId = 32;
     // Ratio a ser editado: 9 (Caixa) * (90/30 Engrenagem) = 27
     public static final double kShooterTurretGearRatio = 27.0;
-    public static final double kShooterTurret_kP = 2.0; // Calibrar depois
+    public static final double kShooterTurret_kP = 4.0; // P um pouco mais alto para auto-aim
     public static final double kShooterTurret_kI = 0.0;
     public static final double kShooterTurret_kD = 0.05;
+
+    // Coordenadas Reais do Hub (Off-Season 2026)
+    public static final Translation2d kBlueHubPose = new Translation2d(4.632, 4.035);
+    public static final Translation2d kRedHubPose = new Translation2d(11.939, 4.025);
 
     // ---- SHOOTER FLYWHEELS ----
     // 2 Motores NEO Vortex (SparkFlex)

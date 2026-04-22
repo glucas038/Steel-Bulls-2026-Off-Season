@@ -5,9 +5,16 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "parallel",
           "data": {
-            "pathName": "01-rota-teste"
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "01-rota-ir-centro"
+                }
+              }
+            ]
           }
         }
       ]
