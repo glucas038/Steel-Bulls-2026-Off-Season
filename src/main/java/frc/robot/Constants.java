@@ -53,11 +53,11 @@ public final class Constants {
     /**
      * Posicao abaixada / coleta: ajuste fino no robô. Baseado em telemetria (~-19 rot no motor).
      */
-    public static final double kIntakePivotDownJointRotations = -19.0 / kIntakePivotGearRatio;
+    public static final double kIntakePivotDownJointRotations = -19.2 / kIntakePivotGearRatio;
 
     /** Oscilacao modo tiro: dois pontos entre stow (0) e coleta (negativo). */
-    public static final double kIntakePivotShootOscJointA = -0.08;
-    public static final double kIntakePivotShootOscJointB = -0.12;
+    public static final double kIntakePivotShootOscJointA = -0.06;
+    public static final double kIntakePivotShootOscJointB = -0.10;
     /** Metade do periodo de oscilacao (s) em cada alvo. */
     public static final double kIntakeShootOscHalfPeriodSeconds = 0.7;
 

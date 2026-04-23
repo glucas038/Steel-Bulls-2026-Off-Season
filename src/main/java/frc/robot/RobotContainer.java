@@ -238,7 +238,7 @@ public class RobotContainer {
         NamedCommands.registerCommand("Atirar Sniper", 
             Commands.parallel(
                 // A) Estes processos ficam mantidos ligados durante TODOS os passos abaixo:
-                shooterFlywheels.runFlywheelsRPMCommand(2500), 
+                shooterFlywheels.runFlywheelsRPMCommand(2800), 
                 //new AimTurretOdometryCommand(drivetrain, shooterTurret),
                 
                 // B) O Tempo passando (Sequência engatilhada):

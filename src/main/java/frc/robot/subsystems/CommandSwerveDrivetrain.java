@@ -285,23 +285,31 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
 
         // ========================================================
-        // ATUALIZAÇÃO DA ODOMETRIA USANDO A LIMELIGHT (MEGATAG)
+        // ATUALIZAÇÃO DA ODOMETRIA USANDO A LIMELIGHT (MEGATAG 2)
         // ========================================================
-        // Traz as leituras considerando a perspectiva padrão (Aliança Azul no WPI)
-        PoseEstimate limelightMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear");
+        
+        // 1. OBRIGATÓRIO NO MEGATAG 2: Compartilhar nossa Bússola perfeita (Yaw) com a câmera.
+        // A Odometria do Drivetrain carrega o Gyro com latência compensada de forma blindada.
+        LimelightHelpers.SetRobotOrientation(
+            "limelight-rear", 
+            this.getState().Pose.getRotation().getDegrees(), 
+            0, 0, 0, 0, 0
+        );
 
-        // Verifica se a leitura é válida e a câmera está vendo 1 ou mais AprilTags
+        // 2. Traz a estimativa de Pose processada no novo algoritmo MegaTag 2 ("orb")
+        PoseEstimate limelightMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
+
+        // Verifica se a leitura é válida e a câmera está vendo as AprilTags
         if (limelightMeasurement != null && limelightMeasurement.tagCount > 0) {
             
-            // Rejeita leituras duvidosas se o robô estiver longe demais da tag (ex: + de 3.5 metros)
-            // para evitar que pequenas tremedeiras da câmera gerem saltos.
-            if (limelightMeasurement.avgTagDist < 3.5) {
+            // Rejeitamos saltos agressivos. Mas o MT2 aguenta olhar tags limpas de um pouco mais longe.
+            if (limelightMeasurement.avgTagDist < 4.0) {
                 // Adiciona a medição com matriz de confiança.
-                // Usamos 9999999 para a rotação (Theta) para dizer: NUNCA confie no ângulo da câmera, confie apenas no Pigeon!
+                // Continuamos banindo (9999999) qualquer interferência Z para que a lataria não rotacione sem motivo.
                 this.addVisionMeasurement(
                     limelightMeasurement.pose, 
                     limelightMeasurement.timestampSeconds,
-                    VecBuilder.fill(0.5, 0.5, 9999999)
+                    VecBuilder.fill(0.7, 0.7, 9999999)
                 );
             }
         }
