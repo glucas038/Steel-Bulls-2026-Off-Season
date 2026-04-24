@@ -77,6 +77,9 @@ public class RobotContainer {
         // Constrói o seletor lendo todos os arquivos .path da pasta deploy
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Auto Chooser", autoChooser);
+
+        // Inicializa a variável Dinâmica na Interface (Para Calibração do Tiro)
+        SmartDashboard.putNumber("Tuning Shooter RPM", 2500.0);
     }
 
     private void configureBindings() {
@@ -188,12 +191,10 @@ public class RobotContainer {
 
         // ---- Shooter, Turret e Feeder ----
         
-        // Gatilho Esquerdo (LT): Prepara o tiro (Gira Flywheels a 2500 RPM) e liga Auto-Aim (Torreta mira por Odometria)
+        // Gatilho Esquerdo (LT): Prepara o tiro LENDO DO ELASTIC (Tuning Mode)
+        // OBS: Torreta (Auto-Aim) desativada provisoriamente por quebra mecânica.
         operator.leftTrigger().whileTrue(
-            Commands.parallel(
-                shooterFlywheels.runFlywheelsRPMCommand(2500), 
-                new AimTurretOdometryCommand(drivetrain, shooterTurret)
-            )
+            shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> SmartDashboard.getNumber("Tuning Shooter RPM", 2500.0))
         );
 
         // Gatilho Direito (RT): Roda o Feeder para descarregar o pente de bolas (100% força)
@@ -234,26 +235,72 @@ public class RobotContainer {
             )
         );
 
-        // 3. Sequência Complexa de Tiro (Míssil com Odometria)
+        // ========================================================
+        // COMANDOS DE OVERRIDE (MIRAR ENQUANTO ANDA)
+        // ========================================================
+        NamedCommands.registerCommand("Ativar AimBot", Commands.runOnce(() -> drivetrain.enableAutoAimOverride()));
+        NamedCommands.registerCommand("Desativar AimBot", Commands.runOnce(() -> drivetrain.disableAutoAimOverride()));
+
+        // 3. Sequência Complexa de Tiro (Míssil com Odometria) - COM TIMEOUT
         NamedCommands.registerCommand("Atirar Sniper", 
             Commands.parallel(
                 // A) Estes processos ficam mantidos ligados durante TODOS os passos abaixo:
-                shooterFlywheels.runFlywheelsRPMCommand(2800), 
-                //new AimTurretOdometryCommand(drivetrain, shooterTurret),
+                // O RPM agora não é mais fixo! Ele consulta o mapa 50x por segundo baseado na Odometria.
+                shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
+                    frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
+                ), 
                 
                 // B) O Tempo passando (Sequência engatilhada):
                 Commands.sequence(
                     // Passo 1: Espera os RPMs subirem e a torre alinhar
                     Commands.waitSeconds(1.0),
 
-                    // Passo 2: Balança tudo para desengasgar / empurrar do funil
+                    // Passo 2: Empurrar para o funil
                     Commands.parallel(
                         feeder.runFeederCommand(0.3).withTimeout(5),
                         intakePivot.shootAssistOscillateCommand(),
                         centrifuge.runCentrifugeCommand(0.5)
                     ).withTimeout(10.0)
                 )
-            ).withTimeout(10.0) // Timeout de 6s pra dar tempo perfeito: 1s mirando + 5s atirando as 30 bolas!
+            ).withTimeout(10.0) // Timeout de 10s
+        );
+
+        // ========================================================
+        // COMANDOS DE ATIRADOR INFINITO (LIGAR / DESLIGAR)
+        // ========================================================
+        
+        // Liga os motores do atirador infinitamente (sem tempo).
+        NamedCommands.registerCommand("Ligar Atirador", 
+            Commands.parallel(
+                shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
+                    frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
+                ),
+                feeder.runFeederCommand(0.3),
+                centrifuge.runCentrifugeCommand(0.5)
+            )
+        );
+
+        // Desliga o atirador cancelando o comando acima. Requer os mesmos subsistemas para forçar a interrupção.
+        NamedCommands.registerCommand("Desligar Atirador", 
+            Commands.parallel(
+                shooterFlywheels.runFlywheelsRPMCommand(0),
+                feeder.runFeederCommand(0),
+                centrifuge.runCentrifugeCommand(0)
+            ).withTimeout(0.1) // Acaba rápido só para interromper
+        );
+
+        // ========================================================
+        // COMANDOS DE OSCILAÇÃO DO INTAKE (AJUDAR A ENGOLIR A BOLA)
+        // ========================================================
+        
+        // Liga o balançar do braço do Intake infinito
+        NamedCommands.registerCommand("Ligar Oscilacao Intake", 
+            intakePivot.shootAssistOscillateCommand()
+        );
+
+        // Para o balanço e manda o braço se recolher (Estocar)
+        NamedCommands.registerCommand("Desligar Oscilacao Intake", 
+            intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotStowJointRotations).withTimeout(0.1)
         );
     }
 }

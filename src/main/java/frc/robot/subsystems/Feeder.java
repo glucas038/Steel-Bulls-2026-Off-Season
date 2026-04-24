@@ -38,14 +38,14 @@ public class Feeder extends SubsystemBase {
         );
     }
 
-    /**
-     * Roda o feeder por um tempo pré-determinado (Útil quando não há sensor para saber se atirou 1 bola e quer atirar pausadamente).
-     * @param power Força do motor
-     * @param durationSeconds Tempo em segundos
-     */
-    public Command feedTimeCommand(double power, double durationSeconds) {
-        return this.run(() -> setPower(power))
-                   .withTimeout(durationSeconds)
-                   .andThen(() -> setPower(0));
-    }
+    // /**
+    //  * Roda o feeder por um tempo pré-determinado (Útil quando não há sensor para saber se atirou 1 bola e quer atirar pausadamente).
+    //  * @param power Força do motor
+    //  * @param durationSeconds Tempo em segundos
+    //  */
+    // public Command feedTimeCommand(double power, double durationSeconds) {
+    //     return this.run(() -> setPower(power))
+    //                .withTimeout(durationSeconds)
+    //                .andThen(() -> setPower(0));
+    // }
 }

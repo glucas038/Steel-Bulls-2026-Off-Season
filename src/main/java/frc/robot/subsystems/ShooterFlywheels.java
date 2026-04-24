@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.MechanismConstants;
+import java.util.function.DoubleSupplier;
 
 /**
  * Subsistema das rodas de disparo (flywheels): dois Spark Flex + NEO Vortex, um por lado, em idle coast.
@@ -84,6 +85,14 @@ public class ShooterFlywheels extends SubsystemBase {
     public Command runFlywheelsRPMCommand(double rpm) {
         return this.runEnd(
             () -> setTargetRPM(rpm),
+            () -> setPower(0)
+        );
+    }
+
+    /** Roda os motores consumindo um valor vivo/constante (ex: do Elastic) */
+    public Command runFlywheelsDynamicRPMCommand(DoubleSupplier rpmSupplier) {
+        return this.runEnd(
+            () -> setTargetRPM(rpmSupplier.getAsDouble()),
             () -> setPower(0)
         );
     }

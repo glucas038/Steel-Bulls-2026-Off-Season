@@ -81,7 +81,12 @@ public class TeleopFacingHubCommand extends Command {
         double deltaX = targetHub.getX() - robotPose.getX();
         double deltaY = targetHub.getY() - robotPose.getY();
 
+        // Calcula o ângulo base (que apontaria a FRENTE do robô para o Hub)
         Rotation2d angleToHub = new Rotation2d(Math.atan2(deltaY, deltaX));
+
+        // Como o nosso Shooter fica na TRASEIRA, nós somamos 180 graus!
+        // Assim, o robô vai dar as costas para o Hub, apontando a arma na direção exata.
+        angleToHub = angleToHub.plus(Rotation2d.fromDegrees(180));
 
         // Aplica na CTRE o comando de Empurrar no XY do piloto e Girar a Lataria matematicamente.
         drivetrain.setControl(

@@ -22,7 +22,7 @@ public final class Constants {
     public static final int kIntakePivotFollowerId = 35;
     public static final double kIntakePivotGearRatio = 81.0;
 
-    public static final double kIntakePivot_kP = 10.0;
+    public static final double kIntakePivot_kP = 20.0;
     public static final double kIntakePivot_kI = 0.0;
     public static final double kIntakePivot_kD = 0.05;
     public static final double kIntakePivot_kS = 0.0;
@@ -53,7 +53,7 @@ public final class Constants {
     /**
      * Posicao abaixada / coleta: ajuste fino no robô. Baseado em telemetria (~-19 rot no motor).
      */
-    public static final double kIntakePivotDownJointRotations = -19.2 / kIntakePivotGearRatio;
+    public static final double kIntakePivotDownJointRotations = -21 / kIntakePivotGearRatio;
 
     /** Oscilacao modo tiro: dois pontos entre stow (0) e coleta (negativo). */
     public static final double kIntakePivotShootOscJointA = -0.06;
@@ -61,8 +61,8 @@ public final class Constants {
     /** Metade do periodo de oscilacao (s) em cada alvo. */
     public static final double kIntakeShootOscHalfPeriodSeconds = 0.7;
 
-    public static final double kIntakeRollerCollectPower = 0.3;
-    public static final double kIntakeRollerExpelPower = -0.3;
+    public static final double kIntakeRollerCollectPower = 0.4;
+    public static final double kIntakeRollerExpelPower = -0.4;
 
     // ---- CENTRIFUGA ----
     // 1 Motor Kraken X44

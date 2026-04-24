@@ -122,7 +122,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* Pedido vetorial para o PathPlanner (controla por velocidades em rad/s) */
     private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
 
+    // Controlador PID para girar o robô pro alvo durante o AutoAim (Substitui o do PathPlanner)
+    private final edu.wpi.first.math.controller.PIDController autoAimPidController = 
+        new edu.wpi.first.math.controller.PIDController(5.0, 0, 0);
+
     private void configurePathPlanner() {
+        // Habilita rotação contínua (para ele não dar a volta mais longa ao passar do 180 graus)
+        autoAimPidController.enableContinuousInput(-Math.PI, Math.PI);
+        
         RobotConfig config;
         try {
             config = RobotConfig.fromGUISettings();
@@ -151,6 +158,38 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             },
             this // Requer o uso da base Drivetrain
         );
+    }
+
+    // ========================================================
+    // MÉTODOS PÚBLICOS PARA ATIVAR E DESATIVAR O OVERRIDE (PADRÃO 2026)
+    // ========================================================
+    
+    public void enableAutoAimOverride() {
+        com.pathplanner.lib.controllers.PPHolonomicDriveController.overrideRotationFeedback(() -> {
+            edu.wpi.first.math.geometry.Translation2d targetHub;
+            java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
+            
+            if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Red) {
+                targetHub = frc.robot.Constants.MechanismConstants.kRedHubPose;
+            } else {
+                targetHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
+            }
+            
+            double deltaX = targetHub.getX() - this.getState().Pose.getX();
+            double deltaY = targetHub.getY() - this.getState().Pose.getY();
+            
+            // Calcula o Ângulo Alvo (Traseira pro Hub)
+            edu.wpi.first.math.geometry.Rotation2d targetAngle = new edu.wpi.first.math.geometry.Rotation2d(Math.atan2(deltaY, deltaX))
+                    .plus(edu.wpi.first.math.geometry.Rotation2d.fromDegrees(180));
+            
+            // Calcula a força do giro em Radianos por Segundo usando nosso PID
+            double currentAngle = this.getState().Pose.getRotation().getRadians();
+            return autoAimPidController.calculate(currentAngle, targetAngle.getRadians());
+        });
+    }
+
+    public void disableAutoAimOverride() {
+        com.pathplanner.lib.controllers.PPHolonomicDriveController.clearRotationFeedbackOverride();
     }
 
     /**
@@ -315,8 +354,17 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
 
         // ========================================================
-        // CÁLCULO DE DISTÂNCIA CONTÍNUA ATÉ O HUB (PARA TESTE/INTERPOLAÇÃO)
+        // CALCULO DE DISTANCIA CONTINUA ATE O HUB (PARA TESTE/INTERPOLACAO)
         // ========================================================
+        double distanceMeters = getHubDistanceMeters();
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Hub Distance Meters", distanceMeters);
+    }
+
+    /**
+     * Calcula a distância exata atual do robô até o Hub (Baseada no MegaTag 2 / Odometria)
+     * @return Distância em Metros
+     */
+    public double getHubDistanceMeters() {
         edu.wpi.first.math.geometry.Translation2d targetHub;
         java.util.Optional<Alliance> currentAlliance = DriverStation.getAlliance();
         
@@ -326,8 +374,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             targetHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
         }
         
-        double distanceMeters = this.getState().Pose.getTranslation().getDistance(targetHub);
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Hub Distance Meters", distanceMeters);
+        return this.getState().Pose.getTranslation().getDistance(targetHub);
     }
 
     private void startSimThread() {
