@@ -67,19 +67,13 @@ public class TeleopFacingHubCommand extends Command {
         double limitedStrafe  = yLimiter.calculate(cubedStrafe) * maxSpeed;
 
         // ============================================
-        // CALCULA O ÂNGULO DA LATARIA PARA O HUB
+        // CALCULA O ÂNGULO DA LATARIA PARA O HUB FANTASMA
         // ============================================
         Pose2d robotPose = drivetrain.getState().Pose;
-        Translation2d targetHub;
-        var myAlliance = DriverStation.getAlliance();
-        if (myAlliance.isPresent() && myAlliance.get() == Alliance.Red) {
-            targetHub = MechanismConstants.kRedHubPose;
-        } else {
-            targetHub = MechanismConstants.kBlueHubPose;
-        }
+        Translation2d virtualHub = drivetrain.getVirtualHub();
 
-        double deltaX = targetHub.getX() - robotPose.getX();
-        double deltaY = targetHub.getY() - robotPose.getY();
+        double deltaX = virtualHub.getX() - robotPose.getX();
+        double deltaY = virtualHub.getY() - robotPose.getY();
 
         // Calcula o ângulo base (que apontaria a FRENTE do robô para o Hub)
         Rotation2d angleToHub = new Rotation2d(Math.atan2(deltaY, deltaX));

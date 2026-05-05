@@ -166,6 +166,19 @@ public class RobotContainer {
         // Registra a função do logger (do AdvantageScope/WPILog) para capturar telemetria do chassi
         drivetrain.registerTelemetry(logger::telemeterize);
 
+         // ---- Intake (controle no gamepad do operador, porta kMechanismControllerPort) ----
+        // D-pad: subir (stow) / descer ate posicao x
+        joystick.povUp().whileTrue(
+            intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotStowJointRotations));
+        joystick.povDown().whileTrue(
+            intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotDownJointRotations));
+        // Bumpers: coletar / expelir (podem rodar junto com o pivô - subsistemas separados)
+        joystick.povLeft().whileTrue(
+            intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower));
+        joystick.povRight().whileTrue(
+            intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerExpelPower));
+        // Aperte e segure o gatilho para Atirar (Usa o comando que criamos para o Autônomo)
+        joystick.rightTrigger().whileTrue(NamedCommands.getCommand("Ligar Atirador"));
         // ---- Intake (controle no gamepad do operador, porta kMechanismControllerPort) ----
         // D-pad: subir (stow) / descer ate posicao x
         operator.povUp().whileTrue(
@@ -272,11 +285,18 @@ public class RobotContainer {
         // Liga os motores do atirador infinitamente (sem tempo).
         NamedCommands.registerCommand("Ligar Atirador", 
             Commands.parallel(
+                // As rodas aceleram imediatamente
                 shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
                     frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
                 ),
-                feeder.runFeederCommand(0.3),
-                centrifuge.runCentrifugeCommand(0.5)
+                // Espera 0.5 segundos antes de empurrar a bola
+                Commands.sequence(
+                    Commands.waitSeconds(0.5),
+                    Commands.parallel(
+                        feeder.runFeederCommand(0.3),
+                        centrifuge.runCentrifugeCommand(0.5)
+                    )
+                )
             )
         );
 

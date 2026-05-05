@@ -166,19 +166,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     
     public void enableAutoAimOverride() {
         com.pathplanner.lib.controllers.PPHolonomicDriveController.overrideRotationFeedback(() -> {
-            edu.wpi.first.math.geometry.Translation2d targetHub;
-            java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
+            edu.wpi.first.math.geometry.Translation2d virtualHub = getVirtualHub();
             
-            if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Red) {
-                targetHub = frc.robot.Constants.MechanismConstants.kRedHubPose;
-            } else {
-                targetHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
-            }
+            double deltaX = virtualHub.getX() - this.getState().Pose.getX();
+            double deltaY = virtualHub.getY() - this.getState().Pose.getY();
             
-            double deltaX = targetHub.getX() - this.getState().Pose.getX();
-            double deltaY = targetHub.getY() - this.getState().Pose.getY();
-            
-            // Calcula o Ângulo Alvo (Traseira pro Hub)
+            // Calcula o Ângulo Alvo (Traseira pro Hub Fantasma)
             edu.wpi.first.math.geometry.Rotation2d targetAngle = new edu.wpi.first.math.geometry.Rotation2d(Math.atan2(deltaY, deltaX))
                     .plus(edu.wpi.first.math.geometry.Rotation2d.fromDegrees(180));
             
@@ -361,20 +354,47 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
 
     /**
-     * Calcula a distância exata atual do robô até o Hub (Baseada no MegaTag 2 / Odometria)
+     * Calcula a distância exata atual do robô até o Hub Fantasma (Shoot-On-The-Fly)
      * @return Distância em Metros
      */
     public double getHubDistanceMeters() {
-        edu.wpi.first.math.geometry.Translation2d targetHub;
-        java.util.Optional<Alliance> currentAlliance = DriverStation.getAlliance();
+        return this.getState().Pose.getTranslation().getDistance(getVirtualHub());
+    }
+
+    /**
+     * Calcula as coordenadas do Alvo Fantasma compensando a velocidade do robô e o tempo de voo da bola.
+     * @return Coordenadas (Translation2d) do alvo virtual no campo.
+     */
+    public edu.wpi.first.math.geometry.Translation2d getVirtualHub() {
+        edu.wpi.first.math.geometry.Translation2d realHub;
+        java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
         
-        if (currentAlliance.isPresent() && currentAlliance.get() == Alliance.Red) {
-            targetHub = frc.robot.Constants.MechanismConstants.kRedHubPose;
+        if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Red) {
+            realHub = frc.robot.Constants.MechanismConstants.kRedHubPose;
         } else {
-            targetHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
+            realHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
         }
+
+        // Distância até o hub real para estimar o tempo de voo inicial
+        double distanceToReal = this.getState().Pose.getTranslation().getDistance(realHub);
         
-        return this.getState().Pose.getTranslation().getDistance(targetHub);
+        // T = Distância / Velocidade da Bola
+        double timeOfFlight = distanceToReal / frc.robot.Constants.MechanismConstants.kShooterNoteSpeedMetersPerSecond;
+
+        // Velocidades do chassi (Robot-Relative)
+        double vxRobot = this.getState().Speeds.vxMetersPerSecond;
+        double vyRobot = this.getState().Speeds.vyMetersPerSecond;
+        double theta = this.getState().Pose.getRotation().getRadians();
+
+        // Converte as velocidades do robô para velocidades vetoriais do campo (Field-Relative)
+        double vxField = vxRobot * Math.cos(theta) - vyRobot * Math.sin(theta);
+        double vyField = vxRobot * Math.sin(theta) + vyRobot * Math.cos(theta);
+
+        // Desloca o Alvo real de forma oposta à velocidade do robô multiplicada pelo tempo de voo
+        double virtualX = realHub.getX() - (vxField * timeOfFlight);
+        double virtualY = realHub.getY() - (vyField * timeOfFlight);
+
+        return new edu.wpi.first.math.geometry.Translation2d(virtualX, virtualY);
     }
 
     private void startSimThread() {

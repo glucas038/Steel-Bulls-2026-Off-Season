@@ -19,9 +19,9 @@ public class ShooterInterpolator {
         // ==============================================================
         
         // Exemplo fictício inicial:
-        distanceToRpmMap.put(2.04552699677152, 2400.0);
-        distanceToRpmMap.put(2.2653971029738864, 2450.0);
-        distanceToRpmMap.put(2.4993061951141584, 2600.0);
+        distanceToRpmMap.put(2.04552699677152, 2450.0);
+        distanceToRpmMap.put(2.2653971029738864, 2500.0);
+        distanceToRpmMap.put(2.4993061951141584, 2625.0);
         distanceToRpmMap.put(2.7595695913336287, 2800.0);
         distanceToRpmMap.put(3.012093300918247, 2950.0);
         distanceToRpmMap.put(3.277297072765206, 3100.0);

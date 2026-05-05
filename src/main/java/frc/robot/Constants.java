@@ -53,7 +53,7 @@ public final class Constants {
     /**
      * Posicao abaixada / coleta: ajuste fino no robô. Baseado em telemetria (~-19 rot no motor).
      */
-    public static final double kIntakePivotDownJointRotations = -21 / kIntakePivotGearRatio;
+    public static final double kIntakePivotDownJointRotations = -24 / kIntakePivotGearRatio;
 
     /** Oscilacao modo tiro: dois pontos entre stow (0) e coleta (negativo). */
     public static final double kIntakePivotShootOscJointA = -0.06;
@@ -61,8 +61,8 @@ public final class Constants {
     /** Metade do periodo de oscilacao (s) em cada alvo. */
     public static final double kIntakeShootOscHalfPeriodSeconds = 0.7;
 
-    public static final double kIntakeRollerCollectPower = 0.4;
-    public static final double kIntakeRollerExpelPower = -0.4;
+    public static final double kIntakeRollerCollectPower = 0.45;
+    public static final double kIntakeRollerExpelPower = -0.45;
 
     // ---- CENTRIFUGA ----
     // 1 Motor Kraken X44
@@ -94,6 +94,8 @@ public final class Constants {
     public static final double kShooterFlywheels_kI = 0.0;
     public static final double kShooterFlywheels_kD = 0.0;
     public static final double kShooterFlywheels_kFF = 0.00015; // Feedforward comum para RPM
+    // Velocidade Física da Nota (m/s). Use para cálculo de Tiro em Movimento (Shoot-On-The-Fly)
+    public static final double kShooterNoteSpeedMetersPerSecond = 4.0;
 
     // ---- ELEVATOR ----
     // 1 Motor Kraken X60
