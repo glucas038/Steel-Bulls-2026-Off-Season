@@ -4,7 +4,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.signals.InvertedValue;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.MechanismConstants;
@@ -20,11 +21,14 @@ public class ShooterTurret extends SubsystemBase {
     // Kraken X44 responsável pelo ângulo do shooter
     private final TalonFX turretMotor = new TalonFX(MechanismConstants.kShooterTurretId);
     
-    private final PositionVoltage positionControl = new PositionVoltage(0).withSlot(0);
+    private final MotionMagicVoltage positionControl = new MotionMagicVoltage(0).withSlot(0);
 
     public ShooterTurret() {
         TalonFXConfiguration config = new TalonFXConfiguration();
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        
+        // [TESTE FÍSICO] Invertendo a polaridade do motor devido à caixa de engrenagem
+        config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         
         // Define coeficientes do PID posicional
         Slot0Configs slot0 = config.Slot0;
@@ -35,9 +39,15 @@ public class ShooterTurret extends SubsystemBase {
         // Limites de velocidade para não chicotear o robô
         config.ClosedLoopGeneral.ContinuousWrap = false;
 
-        // Limita fortemente a pancada para testes: máximo 1.2V (10% de força em uma bateria 12V)
-        config.Voltage.PeakForwardVoltage = 3;
-        config.Voltage.PeakReverseVoltage = -3;
+        // Motion Magic (Trapezoidal Profile) para fazer a correção ser DEVAGAR no início e suave!
+        // Velocidade Máxima de cruzeiro (Rotações do Motor por segundo)
+        config.MotionMagic.MotionMagicCruiseVelocity = 15.0; 
+        // Aceleração da rampa (Como ela começa devagar antes de embalar)
+        config.MotionMagic.MotionMagicAcceleration = 30.0;
+        
+        // Limita a voltagem para segurança extra (Máximo de 6V na bateria de 12V)
+        config.Voltage.PeakForwardVoltage = 6;
+        config.Voltage.PeakReverseVoltage = -6;
 
         turretMotor.getConfigurator().apply(config);
         

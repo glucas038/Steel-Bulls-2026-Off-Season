@@ -122,14 +122,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* Pedido vetorial para o PathPlanner (controla por velocidades em rad/s) */
     private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
 
-    // Controlador PID para girar o robô pro alvo durante o AutoAim (Substitui o do PathPlanner)
-    private final edu.wpi.first.math.controller.PIDController autoAimPidController = 
-        new edu.wpi.first.math.controller.PIDController(5.0, 0, 0);
 
     private void configurePathPlanner() {
-        // Habilita rotação contínua (para ele não dar a volta mais longa ao passar do 180 graus)
-        autoAimPidController.enableContinuousInput(-Math.PI, Math.PI);
-        
+
         RobotConfig config;
         try {
             config = RobotConfig.fromGUISettings();
@@ -160,30 +155,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         );
     }
 
-    // ========================================================
-    // MÉTODOS PÚBLICOS PARA ATIVAR E DESATIVAR O OVERRIDE (PADRÃO 2026)
-    // ========================================================
-    
-    public void enableAutoAimOverride() {
-        com.pathplanner.lib.controllers.PPHolonomicDriveController.overrideRotationFeedback(() -> {
-            edu.wpi.first.math.geometry.Translation2d virtualHub = getVirtualHub();
-            
-            double deltaX = virtualHub.getX() - this.getState().Pose.getX();
-            double deltaY = virtualHub.getY() - this.getState().Pose.getY();
-            
-            // Calcula o Ângulo Alvo (Traseira pro Hub Fantasma)
-            edu.wpi.first.math.geometry.Rotation2d targetAngle = new edu.wpi.first.math.geometry.Rotation2d(Math.atan2(deltaY, deltaX))
-                    .plus(edu.wpi.first.math.geometry.Rotation2d.fromDegrees(180));
-            
-            // Calcula a força do giro em Radianos por Segundo usando nosso PID
-            double currentAngle = this.getState().Pose.getRotation().getRadians();
-            return autoAimPidController.calculate(currentAngle, targetAngle.getRadians());
-        });
-    }
-
-    public void disableAutoAimOverride() {
-        com.pathplanner.lib.controllers.PPHolonomicDriveController.clearRotationFeedbackOverride();
-    }
 
     /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.

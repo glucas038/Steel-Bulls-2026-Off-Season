@@ -30,35 +30,50 @@ public class AimTurretOdometryCommand extends Command {
         // 1. Onde está o robô agora?
         Pose2d robotPose = drivetrain.getState().Pose;
         
-        // 2. Descobre quem somos (Red ou Blue) para escolher a coordenada do pino alvo
-        Translation2d targetHub;
-        var myAlliance = DriverStation.getAlliance();
-        if (myAlliance.isPresent() && myAlliance.get() == Alliance.Red) {
-            targetHub = MechanismConstants.kRedHubPose;
-        } else {
-            // Padrão de segurança: Blue
-            targetHub = MechanismConstants.kBlueHubPose;
-        }
+        // 2. O Chassi já calcula a inércia e nos dá a coordenada mágica
+        Translation2d virtualHub = drivetrain.getVirtualHub();
 
-        // 3. Vetor entre o robô e o Alvo
-        double deltaX = targetHub.getX() - robotPose.getX();
-        double deltaY = targetHub.getY() - robotPose.getY();
+        // [NOVO] Posição real do atirador no campo (Offset de Paralaxe)
+        // X = -0.15m (15cm pra trás do centro)
+        // Y = 0.15m  (15cm pra esquerda do centro)
+        Translation2d turretOffset = new Translation2d(-0.15, 0.15);
+        
+        // Translada e rotaciona o offset baseado na direção em que o chassi está olhando
+        Translation2d turretFieldPosition = robotPose.getTranslation().plus(turretOffset.rotateBy(robotPose.getRotation()));
+
+        // 3. Vetor entre A ARMA e o Alvo Fantasma
+        double deltaX = virtualHub.getX() - turretFieldPosition.getX();
+        double deltaY = virtualHub.getY() - turretFieldPosition.getY();
 
         // 4. Calcula o ângulo puro no campo usando Arco Tangente 2
         Rotation2d fieldAngleToTarget = new Rotation2d(Math.atan2(deltaY, deltaX));
         
-        // 5. Calcula o ângulo necessário deduzindo para onde a lataria do robô já está apontada
+        // 5. Calcula o ângulo necessário deduzindo para onde a lataria do robô já está apontada.
+        // Como o ZERO FISICO da torreta e virado para TRAS, nos subtraimos 180 graus!
         Rotation2d robotHeading = robotPose.getRotation();
-        Rotation2d turretAngleRelative = fieldAngleToTarget.minus(robotHeading);
+        Rotation2d turretAngleRelative = fieldAngleToTarget.minus(robotHeading).minus(Rotation2d.fromDegrees(180));
 
         double degreesNeeded = turretAngleRelative.getDegrees();
-        
-        SmartDashboard.putNumber("Turret Math Needed Deg", degreesNeeded);
-
-        // 6. Aplica a trava física de fios e limites (-90 para esquerda, 90 para direita)
         double clampedDegrees = MathUtil.clamp(degreesNeeded, -90.0, 90.0);
+        
+        // ==========================================================
+        // TELEMETRIA AVANÇADA PARA O ELASTIC / ADVANTAGESCOPE
+        // ==========================================================
+        // 1. Posições no Campo (Mostra as bolinhas no Field2d do Elastic)
+        SmartDashboard.putNumberArray("Turret Debug/Virtual Hub Pose", new double[]{virtualHub.getX(), virtualHub.getY(), 0.0});
+        SmartDashboard.putNumberArray("Turret Debug/Turret Field Pose", new double[]{turretFieldPosition.getX(), turretFieldPosition.getY(), robotHeading.getDegrees()});
+        
+        // 2. Matemática Interna
+        SmartDashboard.putNumber("Turret Debug/Field Angle To Target", fieldAngleToTarget.getDegrees());
+        SmartDashboard.putNumber("Turret Debug/Robot Heading", robotHeading.getDegrees());
+        SmartDashboard.putNumber("Turret Debug/Turret Angle Relative (No Clamp)", turretAngleRelative.getDegrees());
+        
+        // 3. Resultado Final e Erro
+        SmartDashboard.putNumber("Turret Debug/Clamped Target (O que o motor tenta)", clampedDegrees);
+        SmartDashboard.putNumber("Turret Debug/Current Turret Angle", turret.getAngleDegrees());
+        SmartDashboard.putNumber("Turret Debug/Error", clampedDegrees - turret.getAngleDegrees());
 
-        // 7. Envia pro PID rodar o Kraken
+        // Envia pro PID rodar o Kraken
         turret.setTargetAngle(clampedDegrees);
     }
 

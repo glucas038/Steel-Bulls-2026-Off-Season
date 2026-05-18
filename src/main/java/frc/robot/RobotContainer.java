@@ -27,7 +27,6 @@ import frc.robot.subsystems.ShooterFlywheels;
 import frc.robot.subsystems.Feeder;
 import frc.robot.subsystems.Centrifuge;
 import frc.robot.commands.drive.TeleopDrive;
-import frc.robot.commands.drive.TeleopFacingHubCommand;
 import frc.robot.commands.shooter.AimTurretOdometryCommand;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -123,15 +122,10 @@ public class RobotContainer {
             )
         );
 
-        // Gatilho Esquerdo (LT): AimBot do Chassis! 
-        // O piloto continua andando XY livremente, mas a rotação mira no Hub de forma lenta ("na moralzinha").
+        // Gatilho Esquerdo (LT): AimBot da Torreta! 
+        // O piloto continua andando XY livremente, mas a torreta mira no Hub Fantasma de forma autônoma.
         joystick.leftTrigger().whileTrue(
-            new TeleopFacingHubCommand(
-                drivetrain,
-                () -> joystick.getLeftY(), 
-                () -> joystick.getLeftX(), 
-                MaxSpeed * 0.3 // Corre em velocidade baixa como pedido
-            )
+            new AimTurretOdometryCommand(drivetrain, shooterTurret)
         );
 
         // Rotinas do SysId (Usadas apenas na fase de tunagem/characterization)
@@ -248,16 +242,12 @@ public class RobotContainer {
             )
         );
 
-        // ========================================================
-        // COMANDOS DE OVERRIDE (MIRAR ENQUANTO ANDA)
-        // ========================================================
-        NamedCommands.registerCommand("Ativar AimBot", Commands.runOnce(() -> drivetrain.enableAutoAimOverride()));
-        NamedCommands.registerCommand("Desativar AimBot", Commands.runOnce(() -> drivetrain.disableAutoAimOverride()));
 
         // 3. Sequência Complexa de Tiro (Míssil com Odometria) - COM TIMEOUT
         NamedCommands.registerCommand("Atirar Sniper", 
             Commands.parallel(
                 // A) Estes processos ficam mantidos ligados durante TODOS os passos abaixo:
+                new AimTurretOdometryCommand(drivetrain, shooterTurret), // A torreta caça o alvo fantasma
                 // O RPM agora não é mais fixo! Ele consulta o mapa 50x por segundo baseado na Odometria.
                 shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
                     frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
@@ -285,6 +275,8 @@ public class RobotContainer {
         // Liga os motores do atirador infinitamente (sem tempo).
         NamedCommands.registerCommand("Ligar Atirador", 
             Commands.parallel(
+                // A torreta trava no alvo
+                new AimTurretOdometryCommand(drivetrain, shooterTurret),
                 // As rodas aceleram imediatamente
                 shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
                     frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
