@@ -1,0 +1,179 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.6628522727272728,
+        "y": 2.004556818181818
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.781004335444731,
+        "y": 2.224874974663779
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 4.662613636363636,
+        "y": 2.5405113636363637
+      },
+      "prevControl": {
+        "x": 3.7349999999999994,
+        "y": 2.5095909090909094
+      },
+      "nextControl": {
+        "x": 5.881804484449654,
+        "y": 2.581151058572564
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.538215909090908,
+        "y": 2.5405113636363637
+      },
+      "prevControl": {
+        "x": 7.785605451732181,
+        "y": 2.5044778487961206
+      },
+      "nextControl": {
+        "x": 6.265637196546727,
+        "y": 2.725868769750861
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.6218636363636363,
+        "y": 2.5405113636363637
+      },
+      "prevControl": {
+        "x": 5.701886457934924,
+        "y": 2.1983328914268854
+      },
+      "nextControl": {
+        "x": 2.373392292897776,
+        "y": 2.568115556728547
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.6218636363636363,
+        "y": 4.354511363636364
+      },
+      "prevControl": {
+        "x": 2.405420454545454,
+        "y": 4.055613636363637
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": null
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.13836477987421386,
+      "rotationDegrees": 45.0
+    },
+    {
+      "waypointRelativePos": 1.3018867924528301,
+      "rotationDegrees": 45.0
+    },
+    {
+      "waypointRelativePos": 1.4276729559748427,
+      "rotationDegrees": 0.0
+    },
+    {
+      "waypointRelativePos": 2.3333333333333286,
+      "rotationDegrees": 0.0
+    },
+    {
+      "waypointRelativePos": 2.603773584905661,
+      "rotationDegrees": -45.0
+    },
+    {
+      "waypointRelativePos": 2.8238993710691864,
+      "rotationDegrees": -45.0
+    },
+    {
+      "waypointRelativePos": 2.924528301886794,
+      "rotationDegrees": -135.0
+    }
+  ],
+  "constraintZones": [
+    {
+      "name": "Constraints Zone",
+      "minWaypointRelativePos": 1.5350089766606823,
+      "maxWaypointRelativePos": 1.9982046678635548,
+      "constraints": {
+        "maxVelocity": 0.2,
+        "maxAcceleration": 0.5,
+        "maxAngularVelocity": 180.0,
+        "maxAngularAcceleration": 360.0,
+        "nominalVoltage": 12.0,
+        "unlimited": false
+      }
+    }
+  ],
+  "pointTowardsZones": [],
+  "eventMarkers": [
+    {
+      "name": "Intake Coletar",
+      "waypointRelativePos": 1.4434470377019752,
+      "endWaypointRelativePos": 1.8240574506283673,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Intake Coletar"
+        }
+      }
+    },
+    {
+      "name": "Intake Estocar",
+      "waypointRelativePos": 2.053859964093356,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Intake Estocar"
+        }
+      }
+    },
+    {
+      "name": "Ligar Atirador",
+      "waypointRelativePos": 2.958707360861759,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Ligar Atirador"
+        }
+      }
+    }
+  ],
+  "globalConstraints": {
+    "maxVelocity": 0.5,
+    "maxAcceleration": 0.5,
+    "maxAngularVelocity": 180.0,
+    "maxAngularAcceleration": 360.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": 180.0
+  },
+  "reversed": false,
+  "folder": "Autonomo 2 rotas ",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 0.0
+  },
+  "useDefaultConstraints": true
+}

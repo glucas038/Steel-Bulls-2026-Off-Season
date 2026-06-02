@@ -49,11 +49,11 @@ public final class Constants {
      * Posicoes em rotacoes da JUNTA (encoder motor / kIntakePivotGearRatio).
      * Projeto antigo usava ~0.05 em UP; use se o zero mecanico precisar de pequeno offset.
      */
-    public static final double kIntakePivotStowJointRotations = 0.0;
+    public static final double kIntakePivotStowJointRotations = 0.0001;
     /**
      * Posicao abaixada / coleta: ajuste fino no robô. Baseado em telemetria (~-19 rot no motor).
      */
-    public static final double kIntakePivotDownJointRotations = -24 / kIntakePivotGearRatio;
+    public static final double kIntakePivotDownJointRotations = -22.2 / kIntakePivotGearRatio;
 
     /** Oscilacao modo tiro: dois pontos entre stow (0) e coleta (negativo). */
     public static final double kIntakePivotShootOscJointA = -0.06;

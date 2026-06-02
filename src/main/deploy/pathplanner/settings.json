@@ -3,9 +3,11 @@
   "robotLength": 0.85,
   "holonomicMode": true,
   "pathFolders": [
+    "Autonomo 2 rotas ",
     "Testando rotas"
   ],
   "autoFolders": [
+    "New Folder",
     "Teste"
   ],
   "defaultMaxVel": 0.5,

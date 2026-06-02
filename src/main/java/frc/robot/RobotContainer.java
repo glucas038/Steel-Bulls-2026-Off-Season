@@ -41,8 +41,14 @@ public class RobotContainer {
     // Velocidade máxima desejada do robô. Aqui limitamos a 30% (0.3) da velocidade teórica máxima a 12V.
     private double MaxSpeed = 0.3 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); 
     
+    // Velocidade limite para o Modo Tiro (5% do teto físico do robô)
+    private double ShootingMaxSpeed = 0.1 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+    
     // Velocidade máxima de rotação do robô (giro no próprio eixo). Limitado a 1/4 de volta por segundo.
     private double MaxAngularRate = RotationsPerSecond.of(0.25).in(RadiansPerSecond); 
+    
+    // Rotação máxima para o Modo Tiro (Metade da rotação máxima de teleop)
+    private double ShootingMaxAngularRate = MaxAngularRate * 0.5; 
 
     /* Pedidos (Requests) de controle do Swerve CTRE */
     // Trava as rodas em formato de X para o robô não ser empurrado
@@ -90,8 +96,8 @@ public class RobotContainer {
             () -> joystick.getLeftY(),
             () -> joystick.getLeftX(),
             () -> joystick.getRightX(),
-            () -> operator.getHID().getLeftTriggerAxis() > 0.1 ? MaxSpeed * 0.2 : MaxSpeed,
-            () -> operator.getHID().getLeftTriggerAxis() > 0.1 ? MaxAngularRate * 0.2 : MaxAngularRate
+            () -> shooterFlywheels.getCurrentCommand() != null ? ShootingMaxSpeed : (operator.getHID().getLeftTriggerAxis() > 0.1 ? MaxSpeed * 0.2 : MaxSpeed),
+            () -> shooterFlywheels.getCurrentCommand() != null ? ShootingMaxAngularRate : (operator.getHID().getLeftTriggerAxis() > 0.1 ? MaxAngularRate * 0.2 : MaxAngularRate)
         );
         drivetrain.setDefaultCommand(teleopCommand);
 
@@ -122,10 +128,10 @@ public class RobotContainer {
             )
         );
 
-        // Gatilho Esquerdo (LT): AimBot da Torreta! 
-        // O piloto continua andando XY livremente, mas a torreta mira no Hub Fantasma de forma autônoma.
-        joystick.leftTrigger().whileTrue(
-            new AimTurretOdometryCommand(drivetrain, shooterTurret)
+        // Gatilho Esquerdo (LT): Wiggle do Intake!
+        // Faz o braço do intake oscilar para cima e para baixo para ajudar a engolir notas presas.
+        joystick.leftTrigger().toggleOnTrue(
+            intakePivot.shootAssistOscillateCommand()
         );
 
         // Rotinas do SysId (Usadas apenas na fase de tunagem/characterization)
@@ -162,27 +168,27 @@ public class RobotContainer {
 
          // ---- Intake (controle no gamepad do operador, porta kMechanismControllerPort) ----
         // D-pad: subir (stow) / descer ate posicao x
-        joystick.povUp().whileTrue(
+        joystick.povUp().onTrue(
             intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotStowJointRotations));
-        joystick.povDown().whileTrue(
+        joystick.povDown().onTrue(
             intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotDownJointRotations));
         // Bumpers: coletar / expelir (podem rodar junto com o pivô - subsistemas separados)
-        joystick.povLeft().whileTrue(
+        joystick.povLeft().toggleOnTrue(
             intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower));
-        joystick.povRight().whileTrue(
+        joystick.povRight().toggleOnTrue(
             intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerExpelPower));
         // Aperte e segure o gatilho para Atirar (Usa o comando que criamos para o Autônomo)
-        joystick.rightTrigger().whileTrue(NamedCommands.getCommand("Ligar Atirador"));
+        joystick.rightTrigger().toggleOnTrue(NamedCommands.getCommand("Ligar Atirador"));
         // ---- Intake (controle no gamepad do operador, porta kMechanismControllerPort) ----
         // D-pad: subir (stow) / descer ate posicao x
-        operator.povUp().whileTrue(
+        operator.povUp().onTrue(
             intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotStowJointRotations));
-        operator.povDown().whileTrue(
+        operator.povDown().onTrue(
             intakePivot.holdPivotToJointCommand(MechanismConstants.kIntakePivotDownJointRotations));
         // Bumpers: coletar / expelir (podem rodar junto com o pivô - subsistemas separados)
-        operator.leftBumper().whileTrue(
+        operator.leftBumper().toggleOnTrue(
             intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerCollectPower));
-        operator.rightBumper().whileTrue(
+        operator.rightBumper().toggleOnTrue(
             intakeRoller.runRollerCommand(MechanismConstants.kIntakeRollerExpelPower));
         // Modo tiro: oscila pivô + roller coletando (ajuste posicoes/tempo em MechanismConstants)
         operator.x().whileTrue(
@@ -278,7 +284,7 @@ public class RobotContainer {
                 // A torreta trava no alvo
                 new AimTurretOdometryCommand(drivetrain, shooterTurret),
                 // As rodas aceleram imediatamente
-                shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
+                shooterFlywheels.runFlywheelsDynamicRPMCommand(() ->  
                     frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
                 ),
                 // Espera 0.5 segundos antes de empurrar a bola

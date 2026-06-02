@@ -25,6 +25,7 @@ public class ShooterInterpolator {
         distanceToRpmMap.put(2.7595695913336287, 2800.0);
         distanceToRpmMap.put(3.012093300918247, 2950.0);
         distanceToRpmMap.put(3.277297072765206, 3100.0);
+        distanceToRpmMap.put(3.500297072765206, 3300.0);
     }
 
     /**
