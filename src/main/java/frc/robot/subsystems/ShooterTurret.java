@@ -27,7 +27,7 @@ public class ShooterTurret extends SubsystemBase {
         TalonFXConfiguration config = new TalonFXConfiguration();
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         
-        // [TESTE FÍSICO] Invertendo a polaridade do motor devido à caixa de engrenagem
+        // [TESTE FISICO] Invertendo a polaridade do motor devido a caixa de engrenagem
         config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         
         // Define coeficientes do PID posicional

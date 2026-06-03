@@ -321,6 +321,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // ========================================================
         double distanceMeters = getHubDistanceMeters();
         edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Hub Distance Meters", distanceMeters);
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putBoolean("Shooter/Shuttle Mode Active", shouldShuttle());
     }
 
     /**
@@ -332,24 +333,42 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
 
     /**
+     * Verifica se o robô deve entrar no Modo de Passe (Note Shuttling).
+     * Ativo apenas quando na Aliança Azul e posicionado no meio da arena (X entre 5.0 e 11.5 metros).
+     */
+    public boolean shouldShuttle() {
+        java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
+        if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Blue) {
+            double x = this.getState().Pose.getX();
+            return x >= 5.0 && x <= 11.5;
+        }
+        return false;
+    }
+
+    /**
      * Calcula as coordenadas do Alvo Fantasma compensando a velocidade do robô e o tempo de voo da bola.
      * @return Coordenadas (Translation2d) do alvo virtual no campo.
      */
     public edu.wpi.first.math.geometry.Translation2d getVirtualHub() {
-        edu.wpi.first.math.geometry.Translation2d realHub;
-        java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
+        edu.wpi.first.math.geometry.Translation2d targetPose;
         
-        if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Red) {
-            realHub = frc.robot.Constants.MechanismConstants.kRedHubPose;
+        if (shouldShuttle()) {
+            // Modo de passe dinâmico para a aliança azul
+            targetPose = frc.robot.Constants.MechanismConstants.kBlueShuttleTargetPose;
         } else {
-            realHub = frc.robot.Constants.MechanismConstants.kBlueHubPose;
+            java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
+            if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Red) {
+                targetPose = frc.robot.Constants.MechanismConstants.kRedHubPose;
+            } else {
+                targetPose = frc.robot.Constants.MechanismConstants.kBlueHubPose;
+            }
         }
 
-        // Distância até o hub real para estimar o tempo de voo inicial
-        double distanceToReal = this.getState().Pose.getTranslation().getDistance(realHub);
+        // Distância até o alvo para estimar o tempo de voo inicial
+        double distanceToTarget = this.getState().Pose.getTranslation().getDistance(targetPose);
         
         // T = Distância / Velocidade da Bola
-        double timeOfFlight = distanceToReal / frc.robot.Constants.MechanismConstants.kShooterNoteSpeedMetersPerSecond;
+        double timeOfFlight = distanceToTarget / frc.robot.Constants.MechanismConstants.kShooterNoteSpeedMetersPerSecond;
 
         // Velocidades do chassi (Robot-Relative)
         double vxRobot = this.getState().Speeds.vxMetersPerSecond;
@@ -360,9 +379,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         double vxField = vxRobot * Math.cos(theta) - vyRobot * Math.sin(theta);
         double vyField = vxRobot * Math.sin(theta) + vyRobot * Math.cos(theta);
 
-        // Desloca o Alvo real de forma oposta à velocidade do robô multiplicada pelo tempo de voo
-        double virtualX = realHub.getX() - (vxField * timeOfFlight);
-        double virtualY = realHub.getY() - (vyField * timeOfFlight);
+        // Desloca o Alvo de forma oposta à velocidade do robô multiplicada pelo tempo de voo
+        double virtualX = targetPose.getX() - (vxField * timeOfFlight);
+        double virtualY = targetPose.getY() - (vyField * timeOfFlight);
 
         return new edu.wpi.first.math.geometry.Translation2d(virtualX, virtualY);
     }

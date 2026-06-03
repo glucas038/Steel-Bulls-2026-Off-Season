@@ -254,9 +254,10 @@ public class RobotContainer {
             Commands.parallel(
                 // A) Estes processos ficam mantidos ligados durante TODOS os passos abaixo:
                 new AimTurretOdometryCommand(drivetrain, shooterTurret), // A torreta caça o alvo fantasma
-                // O RPM agora não é mais fixo! Ele consulta o mapa 50x por segundo baseado na Odometria.
                 shooterFlywheels.runFlywheelsDynamicRPMCommand(() -> 
-                    frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
+                    drivetrain.shouldShuttle()
+                        ? MechanismConstants.kShuttleRPM
+                        : frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
                 ), 
                 
                 // B) O Tempo passando (Sequência engatilhada):
@@ -283,9 +284,10 @@ public class RobotContainer {
             Commands.parallel(
                 // A torreta trava no alvo
                 new AimTurretOdometryCommand(drivetrain, shooterTurret),
-                // As rodas aceleram imediatamente
                 shooterFlywheels.runFlywheelsDynamicRPMCommand(() ->  
-                    frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
+                    drivetrain.shouldShuttle()
+                        ? MechanismConstants.kShuttleRPM
+                        : frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
                 ),
                 // Espera 0.5 segundos antes de empurrar a bola
                 Commands.sequence(

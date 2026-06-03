@@ -86,6 +86,10 @@ public final class Constants {
     public static final Translation2d kBlueHubPose = new Translation2d(4.632, 4.035);
     public static final Translation2d kRedHubPose = new Translation2d(11.939, 4.025);
 
+    // ---- MODO DE PASSE (SHUTTLING/PASSING) ----
+    public static final Translation2d kBlueShuttleTargetPose = new Translation2d(1.44, 1.06);
+    public static final double kShuttleRPM = 3000.0;
+
     // ---- SHOOTER FLYWHEELS ----
     // 2 Motores NEO Vortex (SparkFlex)
     public static final int kShooterLeftId = 33;
