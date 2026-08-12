@@ -118,6 +118,14 @@ public class RobotContainer {
             point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
         ));
 
+        // Botão X: Desentalar manual (Feeder e Centrífuga no sentido reverso)
+        joystick.x().whileTrue(
+            Commands.parallel(
+                feeder.runFeederCommand(-0.3),
+                centrifuge.runCentrifugeCommand(-0.5)
+            )
+        );
+
         // Botão Y: TESTE DE NAVEGAÇÃO AUTÔNOMA (SEGURE PARA VIAJAR)
         // O robô assumirá o volante e irá para X=2, Y=2 de forma restrita e devagar (0.5 m/s) pra teste.
         joystick.y().whileTrue(
@@ -262,8 +270,12 @@ public class RobotContainer {
                 
                 // B) O Tempo passando (Sequência engatilhada):
                 Commands.sequence(
-                    // Passo 1: Espera os RPMs subirem e a torre alinhar
-                    Commands.waitSeconds(1.0),
+                    // Passo 1: Recua as notas por 0.25s para desentalar e espera o restante do 1s de aceleração
+                    Commands.parallel(
+                        feeder.runFeederCommand(-0.3),
+                        centrifuge.runCentrifugeCommand(-0.5)
+                    ).withTimeout(0.25),
+                    Commands.waitSeconds(0.75),
 
                     // Passo 2: Empurrar para o funil
                     Commands.parallel(
@@ -289,9 +301,13 @@ public class RobotContainer {
                         ? MechanismConstants.kShuttleRPM
                         : frc.robot.utils.ShooterInterpolator.getTargetRPM(drivetrain.getHubDistanceMeters())
                 ),
-                // Espera 0.5 segundos antes de empurrar a bola
+                // Recua as notas por 0.25s e depois empurra para frente
                 Commands.sequence(
-                    Commands.waitSeconds(0.5),
+                    Commands.parallel(
+                        feeder.runFeederCommand(-0.3),
+                        centrifuge.runCentrifugeCommand(-0.5)
+                    ).withTimeout(0.25),
+                    Commands.waitSeconds(0.25), // Restante do tempo de spin-up
                     Commands.parallel(
                         feeder.runFeederCommand(0.3),
                         centrifuge.runCentrifugeCommand(0.5)

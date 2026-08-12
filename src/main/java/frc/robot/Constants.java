@@ -97,7 +97,7 @@ public final class Constants {
     public static final double kShooterFlywheels_kP = 0.0001; // REV SparkMax/Flex P
     public static final double kShooterFlywheels_kI = 0.0;
     public static final double kShooterFlywheels_kD = 0.0;
-    public static final double kShooterFlywheels_kFF = 0.00015; // Feedforward comum para RPM
+    public static final double kShooterFlywheels_kFF = 0.0018; // Ajustado para Voltagem (0.00015 * 12)
     // Velocidade Física da Nota (m/s). Use para cálculo de Tiro em Movimento (Shoot-On-The-Fly)
     public static final double kShooterNoteSpeedMetersPerSecond = 4.0;
 
