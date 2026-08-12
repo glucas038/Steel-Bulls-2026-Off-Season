@@ -55,6 +55,7 @@ public class AimTurretOdometryCommand extends Command {
 
         double degreesNeeded = turretAngleRelative.getDegrees();
         double clampedDegrees = MathUtil.clamp(degreesNeeded, -90.0, 90.0);
+        boolean targetWasClamped = Math.abs(degreesNeeded - clampedDegrees) > 1e-9;
         
         // ==========================================================
         // TELEMETRIA AVANÇADA PARA O ELASTIC / ADVANTAGESCOPE
@@ -70,6 +71,7 @@ public class AimTurretOdometryCommand extends Command {
         
         // 3. Resultado Final e Erro
         SmartDashboard.putNumber("Turret Debug/Clamped Target (O que o motor tenta)", clampedDegrees);
+        SmartDashboard.putBoolean("Turret Debug/Target Was Clamped", targetWasClamped);
         SmartDashboard.putNumber("Turret Debug/Current Turret Angle", turret.getAngleDegrees());
         SmartDashboard.putNumber("Turret Debug/Error", clampedDegrees - turret.getAngleDegrees());
 

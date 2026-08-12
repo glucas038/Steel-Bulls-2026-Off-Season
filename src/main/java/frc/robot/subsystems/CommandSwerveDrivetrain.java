@@ -21,10 +21,13 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
+import frc.robot.Constants.HubSide;
+import frc.robot.Constants.MechanismConstants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.RobotConfig;
@@ -41,6 +44,9 @@ import frc.robot.utils.LimelightHelpers.PoseEstimate;
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Subsystem {
     private static final double kSimLoopPeriod = 0.004; // 4 ms
+    private static final String kLimelightName = "limelight-rear";
+    private static final double kMaxVisionTagDistanceMeters = 4.0;
+    private static final int kMinVisionSeedTagCount = 2;
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
 
@@ -50,6 +56,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
     private boolean m_hasAppliedOperatorPerspective = false;
+    /* Prevent repeated pose resets after a rear-facing camera first gains sight of the Hub. */
+    private boolean m_hasSeededPoseWhileEnabled = false;
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -290,31 +298,59 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // ATUALIZAÇÃO DA ODOMETRIA USANDO A LIMELIGHT (MEGATAG 2)
         // ========================================================
         
-        // 1. OBRIGATÓRIO NO MEGATAG 2: Compartilhar nossa Bússola perfeita (Yaw) com a câmera.
-        // A Odometria do Drivetrain carrega o Gyro com latência compensada de forma blindada.
+        // The rear camera may only see the Hub after the robot turns to give it line of sight.
+        // Keep applying MegaTag 1 while disabled, then allow exactly one seed after enable.
+        if (DriverStation.isDisabled()) {
+            m_hasSeededPoseWhileEnabled = false;
+        }
+
+        PoseEstimate seedMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue(kLimelightName);
+        boolean seededFromVision = false;
+        boolean seedMeasurementValid =
+                isVisionEstimateValid(seedMeasurement, kMinVisionSeedTagCount);
+        boolean canApplyVisionSeed =
+                DriverStation.isDisabled() || !m_hasSeededPoseWhileEnabled;
+        if (seedMeasurementValid && canApplyVisionSeed) {
+            // Two tags give MegaTag 1 enough information to establish the initial field pose.
+            resetPose(seedMeasurement.pose);
+            seededFromVision = true;
+            if (!DriverStation.isDisabled()) {
+                m_hasSeededPoseWhileEnabled = true;
+            }
+        }
+
+        SmartDashboard.putBoolean("Vision/Seeded from MT1", seededFromVision);
+        SmartDashboard.putBoolean(
+                "Vision/Waiting for Initial Seed",
+                !DriverStation.isDisabled() && !m_hasSeededPoseWhileEnabled);
+        SmartDashboard.putBoolean(
+                "Vision/Initial Seed Complete",
+                m_hasSeededPoseWhileEnabled);
+        SmartDashboard.putNumber("Vision/MT1 Tag Count", seedMeasurement.tagCount);
+        SmartDashboard.putNumber("Vision/MT1 Average Tag Distance", seedMeasurement.avgTagDist);
+
         LimelightHelpers.SetRobotOrientation(
-            "limelight-rear", 
+            kLimelightName,
             this.getState().Pose.getRotation().getDegrees(), 
             0, 0, 0, 0, 0
         );
 
-        // 2. Traz a estimativa de Pose processada no novo algoritmo MegaTag 2 ("orb")
-        PoseEstimate limelightMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-rear");
+        // The camera's rear-facing 180 degree mount is configured in the Limelight web interface.
+        PoseEstimate limelightMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(kLimelightName);
 
-        // Verifica se a leitura é válida e a câmera está vendo as AprilTags
-        if (limelightMeasurement != null && limelightMeasurement.tagCount > 0) {
-            
-            // Rejeitamos saltos agressivos. Mas o MT2 aguenta olhar tags limpas de um pouco mais longe.
-            if (limelightMeasurement.avgTagDist < 4.0) {
-                // Adiciona a medição com matriz de confiança.
-                // Continuamos banindo (9999999) qualquer interferência Z para que a lataria não rotacione sem motivo.
-                this.addVisionMeasurement(
-                    limelightMeasurement.pose, 
-                    limelightMeasurement.timestampSeconds,
-                    VecBuilder.fill(0.7, 0.7, 9999999)
-                );
-            }
+        boolean visionAccepted = isVisionEstimateValid(limelightMeasurement, 1);
+        if (visionAccepted) {
+            // After the one-time MegaTag 1 seed, trust the drivetrain gyro for heading updates.
+            this.addVisionMeasurement(
+                limelightMeasurement.pose,
+                limelightMeasurement.timestampSeconds,
+                VecBuilder.fill(0.7, 0.7, 9999999)
+            );
         }
+
+        SmartDashboard.putBoolean("Vision/MT2 Accepted", visionAccepted);
+        SmartDashboard.putNumber("Vision/MT2 Tag Count", limelightMeasurement.tagCount);
+        SmartDashboard.putNumber("Vision/MT2 Average Tag Distance", limelightMeasurement.avgTagDist);
 
         // ========================================================
         // CALCULO DE DISTANCIA CONTINUA ATE O HUB (PARA TESTE/INTERPOLACAO)
@@ -337,6 +373,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      * Ativo apenas quando na Aliança Azul e posicionado no meio da arena (X entre 5.0 e 11.5 metros).
      */
     public boolean shouldShuttle() {
+        if (MechanismConstants.kUsePracticeHubOverride) {
+            return false;
+        }
+
         java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
         if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Blue) {
             double x = this.getState().Pose.getX();
@@ -351,24 +391,24 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      */
     public edu.wpi.first.math.geometry.Translation2d getVirtualHub() {
         edu.wpi.first.math.geometry.Translation2d targetPose;
+        HubSide targetHubSide = getTargetHubSide();
         
         if (shouldShuttle()) {
             // Modo de passe dinâmico para a aliança azul
-            targetPose = frc.robot.Constants.MechanismConstants.kBlueShuttleTargetPose;
+            targetPose = MechanismConstants.kBlueShuttleTargetPose;
+            SmartDashboard.putString("Field/Target Hub", "SHUTTLE");
         } else {
-            java.util.Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
-            if (currentAlliance.isPresent() && currentAlliance.get() == DriverStation.Alliance.Red) {
-                targetPose = frc.robot.Constants.MechanismConstants.kRedHubPose;
-            } else {
-                targetPose = frc.robot.Constants.MechanismConstants.kBlueHubPose;
-            }
+            targetPose = targetHubSide == HubSide.RED
+                    ? MechanismConstants.kRedHubPose
+                    : MechanismConstants.kBlueHubPose;
+            SmartDashboard.putString("Field/Target Hub", targetHubSide.name());
         }
 
         // Distância até o alvo para estimar o tempo de voo inicial
         double distanceToTarget = this.getState().Pose.getTranslation().getDistance(targetPose);
         
         // T = Distância / Velocidade da Bola
-        double timeOfFlight = distanceToTarget / frc.robot.Constants.MechanismConstants.kShooterNoteSpeedMetersPerSecond;
+        double timeOfFlight = distanceToTarget / MechanismConstants.kShooterNoteSpeedMetersPerSecond;
 
         // Velocidades do chassi (Robot-Relative)
         double vxRobot = this.getState().Speeds.vxMetersPerSecond;
@@ -384,6 +424,22 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         double virtualY = targetPose.getY() - (vyField * timeOfFlight);
 
         return new edu.wpi.first.math.geometry.Translation2d(virtualX, virtualY);
+    }
+
+    private HubSide getTargetHubSide() {
+        if (MechanismConstants.kUsePracticeHubOverride) {
+            return MechanismConstants.kPracticeHubSide;
+        }
+
+        return DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
+                ? HubSide.RED
+                : HubSide.BLUE;
+    }
+
+    private static boolean isVisionEstimateValid(PoseEstimate measurement, int minimumTagCount) {
+        return measurement != null
+                && measurement.tagCount >= minimumTagCount
+                && measurement.avgTagDist < kMaxVisionTagDistanceMeters;
     }
 
     private void startSimThread() {

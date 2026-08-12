@@ -150,7 +150,7 @@ public class RobotContainer {
         joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // Zera a referência de "Frente" (Field-Centric) do robô pressionando o Bumper Esquerdo.
-        // Importante caso o robô perca a referência do campo ou seja posicionado errado.
+        // Isto muda apenas a referencia de controle do motorista; a pose do campo vem da Limelight.
         joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         /* 

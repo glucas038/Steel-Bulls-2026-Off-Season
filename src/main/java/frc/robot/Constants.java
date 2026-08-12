@@ -12,6 +12,11 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Translation2d;
 
 public final class Constants {
+  public enum HubSide {
+    BLUE,
+    RED
+  }
+
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
     public static final int kMechanismControllerPort = 1;
@@ -61,8 +66,8 @@ public final class Constants {
     /** Metade do periodo de oscilacao (s) em cada alvo. */
     public static final double kIntakeShootOscHalfPeriodSeconds = 0.7;
 
-    public static final double kIntakeRollerCollectPower = 0.45;
-    public static final double kIntakeRollerExpelPower = -0.45;
+    public static final double kIntakeRollerCollectPower = 0.35;
+    public static final double kIntakeRollerExpelPower = -0.35;
 
     // ---- CENTRIFUGA ----
     // 1 Motor Kraken X44
@@ -85,6 +90,13 @@ public final class Constants {
     // Coordenadas Reais do Hub (Off-Season 2026)
     public static final Translation2d kBlueHubPose = new Translation2d(4.632, 4.035);
     public static final Translation2d kRedHubPose = new Translation2d(11.939, 4.025);
+
+    /**
+     * The current practice field uses the red Hub (AprilTags 9 and 10). Disable this on a full
+     * field so targeting follows the Driver Station alliance again.
+     */
+    public static final boolean kUsePracticeHubOverride = true;
+    public static final HubSide kPracticeHubSide = HubSide.RED;
 
     // ---- MODO DE PASSE (SHUTTLING/PASSING) ----
     public static final Translation2d kBlueShuttleTargetPose = new Translation2d(1.44, 1.06);

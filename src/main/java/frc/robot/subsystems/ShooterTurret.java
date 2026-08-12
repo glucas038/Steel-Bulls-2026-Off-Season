@@ -6,6 +6,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.signals.InvertedValue;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.MechanismConstants;
@@ -14,7 +15,7 @@ import frc.robot.Constants.MechanismConstants;
  * Subsistema do pivô do shooter (Turret): um TalonFX (Kraken X44) com freio que define o ângulo lateral.
  * Capaz de virar 90 graus para cada lado.
  * <p>
- * O encoder é zerado na inicialização (zero mecânico ao ligar apontando pra frente).
+ * O encoder é zerado na inicialização (zero mecânico ao ligar apontando para trás).
  */
 public class ShooterTurret extends SubsystemBase {
     
@@ -51,21 +52,23 @@ public class ShooterTurret extends SubsystemBase {
 
         turretMotor.getConfigurator().apply(config);
         
-        // Setup de Posição Inicial (0 graus mecânico ao ligar)
+        // The turret must be physically at its rear-facing zero when robot code starts.
         turretMotor.setPosition(0);
     }
 
     /**
      * Define o ângulo alvo da torre (Turret) usando PID interno do Kraken.
-     * @param targetDegrees O ângulo em graus (-90 a 90). Onde 0 é pra frente.
+     * @param targetDegrees O ângulo em graus (-90 a 90). Onde 0 aponta para trás.
      */
     public void setTargetAngle(double targetDegrees) {
+        double boundedTargetDegrees = MathUtil.clamp(targetDegrees, -90.0, 90.0);
+
         // Converte o ângulo (graus) na rotação nominal da junta e multiplica pela redução para achar a rotação do motor
-        double targetRotationsAtJoint = targetDegrees / 360.0;
+        double targetRotationsAtJoint = boundedTargetDegrees / 360.0;
         double targetRotationsAtMotor = targetRotationsAtJoint * MechanismConstants.kShooterTurretGearRatio;
         
         turretMotor.setControl(positionControl.withPosition(targetRotationsAtMotor));
-        SmartDashboard.putNumber("Turret Target Deg", targetDegrees);
+        SmartDashboard.putNumber("Turret Target Deg", boundedTargetDegrees);
     }
 
     /** Manda o motor descansar ou forçar giro manual a % */
